@@ -74,7 +74,7 @@ Built from research into the top open-source deep research implementations (199-
 ```
 
 ```
-/deep-research deep Research the yacht brokerage technology landscape for strategic planning
+/deep-research deep What is the current state of AI regulation across EU, US, and Asia? Practical compliance implications for a SaaS startup.
 ```
 
 ```
