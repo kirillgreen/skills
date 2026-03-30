@@ -45,7 +45,7 @@ Instead of "summarize these" or "analyze the competition", this framework extrac
 Start by understanding what the user wants to research. This is an interactive conversation — ask questions until you have a clear research brief.
 
 **Gather:**
-1. **Target** — What market, industry, or opportunity? (e.g., "yacht brokerage SaaS", "AI flashcards for language teachers", "mobile reading apps")
+1. **Target** — What market, industry, or opportunity? (e.g., "construction project management SaaS", "AI tutoring for K-12", "fitness tracking apps")
 2. **Angle** — What's the user's position? Entering as newcomer, expanding existing product, evaluating partnership?
 3. **Known competitors** — Any specific companies or products the user already knows about?
 4. **User-provided sources** — URLs, files, documents the user wants included? Accept any format.
