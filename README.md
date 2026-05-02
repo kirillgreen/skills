@@ -9,6 +9,7 @@ Custom AI Agent Skills for [Claude Code](https://docs.anthropic.com/en/docs/clau
 | [attack-surface](attack-surface/) | Strategic research framework that compresses months of market research into hours through 3 power questions |
 | [deep-research](deep-research/) | Multi-source research with inline citations, source quality tiers, contradictions analysis, and adversarial review |
 | [first-principles](first-principles/) | Multi-pass first principles analysis that decomposes problems to fundamental truths through 4 universal lenses |
+| [tdd](tdd/) | Spec-driven Test-Driven Development with strict Red-Green-Refactor cycle and three context-isolated subagents |
 
 ## What Are Skills?
 
