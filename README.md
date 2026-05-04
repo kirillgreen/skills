@@ -1,4 +1,4 @@
-# Skills
+# Custom Claude Code Skills
 
 Custom AI Agent Skills for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) by Kirill Oleinichenko.
 
