@@ -1,6 +1,17 @@
 # tdd
 
-A Claude Code skill that runs strict spec-driven Test-Driven Development with three context-isolated subagents (RED, GREEN, REFACTOR).
+A Claude Code skill that runs strict spec-driven Test-Driven Development with three context-isolated subagents (RED, GREEN, REFACTOR), three-dimension spec verification, and a spec-defect escape hatch that refuses to encode a contradictory spec into green tests.
+
+## What's new in v2
+
+v2 builds on v1's subagent isolation with a heavier verification layer:
+
+- **Three-dimension verification** — every criterion is checked for **Completeness · Traceability · Coherence** after the cycle, not just "do the tests pass".
+- **Severity-tiered findings** — **CRITICAL / WARNING / SUGGESTION**, tracked in an auditable findings ledger with an acknowledged-override trail (so silenced criticals leave a paper trail instead of vanishing).
+- **Spec-defect escape hatch** — when GREEN reveals the spec is internally contradictory or unimplementable, the pipeline **halts and reports the defect** instead of silently encoding the bug into passing tests.
+- **Prompt-only mode** — run the cycle without a locked spec for features too small to spec.
+
+**Eval-backed.** In a head-to-head evaluation, v2 caught a planted spec contradiction — a gating rule that conflicted with its own prose contract — that v1 shipped as **19 passing tests over a real access-control bug**, while raising **zero** false defects across clean specs (3–18 acceptance criteria each). Strictly better at catching bad specs, with no regression on good ones.
 
 ## What it does
 
@@ -10,9 +21,9 @@ This skill enforces the discipline:
 
 1. **Spec** — write or extract numbered acceptance criteria (`AC-1`, `AC-2`, …, edge cases `EC-*`, error cases `ERR-*`). Lock the spec before any code is written.
 2. **RED** — a `tdd-test-writer` subagent (no access to implementation) writes failing tests, one per criterion. The orchestrator verifies they actually fail before continuing.
-3. **GREEN** — a `tdd-implementer` subagent writes the minimum code to pass. It cannot modify test files. The orchestrator validates that no test was weakened and only files in scope were touched.
+3. **GREEN** — a `tdd-implementer` subagent writes the minimum code to pass. It cannot modify test files. If GREEN proves the spec is internally contradictory or unimplementable, it raises a **spec-defect** and the cycle halts instead of encoding the bug. The orchestrator validates that no test was weakened and only files in scope were touched.
 4. **REFACTOR** — a `tdd-refactorer` subagent improves the code while keeping tests green. Reverts everything if any test breaks.
-5. **Verify** — the orchestrator builds a traceability matrix mapping every `AC-*` / `EC-*` / `ERR-*` criterion to a passing test. Gaps are reported, not hidden.
+5. **Verify** — a three-dimension check (**Completeness · Traceability · Coherence**) maps every `AC-*` / `EC-*` / `ERR-*` criterion to a passing test and surfaces spec gaps, untraceable tests, and internal contradictions. Findings are tiered CRITICAL / WARNING / SUGGESTION; gaps are reported, not hidden.
 
 Each phase is gated. The orchestrator will not move on until the previous gate is green.
 
@@ -26,6 +37,8 @@ Other things this skill does that ad-hoc TDD doesn't:
 - **Post-RED lint** — flags over-mocking, weak assertions, tests of private internals, missing imports
 - **Implementation scope check** — implementer is told exactly which files it may touch; out-of-scope edits are reported
 - **Spec coverage matrix** at the end — every criterion → test mapping, with explicit "MISSING" markers for gaps
+- **Spec-defect escape hatch** — when GREEN proves the spec impossible or self-contradictory, the cycle stops and reports it rather than shipping green tests over a real bug
+- **Three-dimension verification + findings ledger** — Completeness / Traceability / Coherence, severity-tiered (CRITICAL / WARNING / SUGGESTION), with an audit trail for acknowledged overrides
 - **Final quality gate** — full test suite + type check + build, not just the targeted file
 
 ## Supported test frameworks
