@@ -2,6 +2,14 @@
 
 Use these templates when launching Phases 3-6 analysis subagents. Each receives the Source Dossier and prior analysis results. All analysis subagents should use `general-purpose` subagent type.
 
+> **Credibility discipline — prepend this to EVERY section prompt below (the dossier the subagent receives is credibility-annotated by the Phase-2.5 vetting pass; honor the tags):**
+>
+> "Each source in the dossier is tagged authority (P/S/T) and independence (Independent/Interested/Unknown). When you build an insight, assumption, opportunity, or stress-test answer:
+> 1. **Rank Independent-Primary evidence first.** An interested party's claim about its own category is marketing, not fact.
+> 2. **If a claim's only support is Interested/Unknown-tier, you may write it only as 'X claims…' — never as a fact** — and tag it inline `(source — ⚠interested)`. It must not raise a Leverage/fragility score on its own.
+> 3. **Match assertion strength to evidence independence in the prose.** A provocative-but-thin, interested-only insight must read tentatively.
+> 4. **Production polish is not authority.** Do not promote a glossy vendor blog to 'Independent' to make a point work (forbidden). If a whole question has only interested sources, say so and mark it low-confidence."
+
 ---
 
 ## Section: Unspoken Insights (Phase 3)
@@ -13,7 +21,7 @@ Research brief:
 {RESEARCH_BRIEF}
 
 Source Dossier:
-{FULL_SOURCE_DOSSIER}
+{CREDIBILITY_ANNOTATED_DOSSIER}
 
 Your task: Answer this question with rigorous evidence from the sources above:
 
@@ -47,7 +55,7 @@ Research brief:
 {RESEARCH_BRIEF}
 
 Source Dossier:
-{FULL_SOURCE_DOSSIER}
+{CREDIBILITY_ANNOTATED_DOSSIER}
 
 Prior analysis — Unspoken Insights:
 {PHASE_3_RESULTS}
@@ -90,7 +98,7 @@ Research brief:
 {RESEARCH_BRIEF}
 
 Source Dossier:
-{FULL_SOURCE_DOSSIER}
+{CREDIBILITY_ANNOTATED_DOSSIER}
 
 Prior analysis:
 - Unspoken Insights: {PHASE_3_RESULTS}
@@ -108,7 +116,9 @@ For each of the 5 questions:
 3. **Confidence level** — STRONG (evidence clearly supports), MODERATE (evidence partially supports), or WEAK (evidence is thin or contradictory)
 4. **Remaining risk** — what the answer doesn't fully address
 
-Step 3: For any answer rated WEAK, follow up with:
+Step 3 — **stress-test your own evidence, not just the idea:** re-read each of your 5 answers and ask "what does this rest on?" Downgrade an answer resting on **Interested/Unknown-only or a single interested chain to WEAK** — regardless of how much agreeing-but-interested evidence exists (an all-vendor echo is not STRONG) — and name the missing Independent corroboration as the remaining risk. **But do not crush a lone strong source:** an answer backed by a single *Independent-Primary* chain stays at least MODERATE (rubric rule 6); only multiple independent chains earn STRONG.
+
+Step 4: For any answer rated WEAK (by thin evidence OR by weak provenance from Step 3), follow up with:
 "What's the strongest possible version of the argument for this idea, and where does it still break?"
 
 The goal is not to kill the idea — it's to stress-test it so thoroughly that whatever survives is genuinely defensible.
@@ -129,6 +139,9 @@ All prior analysis:
 - Fragile Assumptions: {PHASE_4_RESULTS}
 - Investor Stress-Test: {PHASE_5_RESULTS}
 
+Source Credibility Ledger (which sources are Independent vs Interested — apply it):
+{CREDIBILITY_LEDGER}
+
 Your task:
 
 "Given all the unspoken insights, fragile assumptions, and blind spots we've found — what are the 3 highest-leverage entry points or strategic moves?"
@@ -140,12 +153,13 @@ For each opportunity:
 4. **The moat** — what would make this defensible once established
 5. **Risk** — the biggest thing that could go wrong
 6. **Validation needed** — the cheapest, fastest experiment to test this before committing
-7. **Leverage score (1-5)** — how much impact relative to effort
+7. **Leverage score (1-5)** — how much impact relative to effort (pure impact/effort — do NOT lower it for weak evidence)
+8. **Evidence confidence (High/Med/Low)** — from the ledger: if the supporting evidence is interested-only, this is **Low** and "Validation needed" must begin "independent corroboration first." A high-Leverage / Low-evidence opportunity is legitimate — label it "big if true, unproven," don't suppress it.
 
 Also identify:
 - **The contrarian opportunity** — the one that goes against market consensus but is supported by evidence
 - **The timing play** — the one that depends on getting the timing right (a fragile assumption about to break)
 - **The safe bet** — the one with the most evidence and lowest risk
 
-Rank all opportunities by leverage score. Be honest about which ones are speculative vs. well-supported.
+Rank all opportunities by leverage score (impact). Report Evidence confidence alongside — never let an interested-only opportunity print High confidence. Be honest about which ones are speculative vs. well-supported.
 ```

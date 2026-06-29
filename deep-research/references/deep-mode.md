@@ -34,7 +34,10 @@ Each subagent needs:
 | Research-3 | Trends & future | 2-3 | Where things are heading, emerging approaches |
 | Research-4 | Contrarian & edge cases | 2-3 | What could go wrong, minority viewpoints, failure modes |
 | Gap-Filler | Knowledge gaps | Dynamic | Fills gaps found after initial research completes |
+| **Source-Vetter** | **Credibility firewall** | **N/A** | **Independently grades all collected sources (authority × independence) BEFORE Triangulate — must not be one of the Research agents (separation of duties)** |
 | Contrarian | Adversarial review | N/A | Attacks the draft (Phase 7) |
+
+**Source-Vetter (runs after Parallel Retrieve, before Triangulate).** Once the Research agents return, launch one Source-Vetter that did NOT gather. Give it every source + the rubric `references/source-credibility.md`. It returns a credibility ledger (per source: P/S/T × Ind/Int/Unknown + sub-flags) and, per load-bearing claim, the count of *independent* evidence chains (echoes collapsed). Triangulate then weights by the ledger, not by raw source count. **Fail-open:** a low-confidence/errored ledger → treat unvetted sources as Unknown=Interested and flag "ledger degraded"; never silently trust the raw haul.
 
 ### Subagent Launch Template
 
@@ -71,13 +74,12 @@ Do NOT duplicate their work.
 - Prefer: academic papers, official documentation, practitioner blogs, industry reports
 - Avoid: SEO content farms, undated listicles, anonymous opinion pieces
 
-### Source Scoring
-For each source, assign a quality score:
-5 = Primary research, data, or official documentation
-4 = Expert analysis with citations
-3 = Quality journalism or well-sourced blog
-2 = General commentary, secondary reporting
-1 = SEO content, unsourced claims, promotional material
+### Source Tagging (two axes, per `references/source-credibility.md` — not a single 1-5 score)
+For each source, tag both axes:
+- **Authority:** P (primary — original data/research/official docs/first-party datasets), S (secondary — named-author journalism or analyst report with disclosed method), T (tertiary — aggregator/SEO/undated/anonymous)
+- **Independence:** Independent (no stake) · Interested (vendor/competitor/PR/affiliate writing about its own category) · Unknown
+- **Sub-flags:** `manipulable` (reviews/forums), `⚠vendor` (a seller's own claim), `secondary-only` (couldn't reach the primary)
+Production polish is not authority — a glossy vendor blog is Interested-Secondary at best. Emit raw provenance facts here; the Source-Vetter does the authoritative grading.
 
 ### Output Format
 Save your findings to the specified path. Use this structure:
@@ -86,7 +88,7 @@ Save your findings to the specified path. Use this structure:
 ### Answer
 {Your synthesis}
 ### Evidence
-- {Claim}: {evidence} [Source: {url}, Quality: {score}]
+- {Claim}: {evidence} [Source: {url}, {P/S/T} × {Ind/Int/Unknown}{, sub-flag}]
 ### Confidence: High/Medium/Low
 ### Reasoning: {why this confidence level}
 
@@ -100,7 +102,7 @@ Save your findings to the specified path. Use this structure:
 {What you couldn't find good answers for}
 
 ## Source Index
-| # | URL | Title | Type | Quality |
+| # | URL | Title | Authority (P/S/T) | Independence (Ind/Int/Unknown) | Sub-flags |
 {table of all sources consulted}
 """)
 ```
@@ -191,6 +193,7 @@ When combining subagent findings:
 3. **Elevate surprises**: If a subagent flagged something unexpected, that's often the most valuable finding.
 4. **Preserve uncertainty**: Don't collapse "medium confidence" findings into definitive statements just because it reads better.
 5. **Source diversity**: The final source list should span multiple types (academic, industry, practitioner, official docs). If it's all one type, the research has a systematic blind spot.
+6. **Retain-and-annotate, never drop (UNION rule + credibility):** a source the Source-Vetter demoted is **ranked lower and tagged**, not omitted. When synthesis subagents each write a complete draft, a demoted-but-relevant finding must still appear (with its caveat) — silent omission of a low-tier finding is deletion by the back door. Deprioritize ≠ delete.
 
 ## Token Budget Guidelines
 
@@ -200,8 +203,9 @@ Deep mode is expensive by design — that's the trade-off for thoroughness.
 |-----------|-----------------|
 | Orchestrator (you) | 30-50K |
 | Each research subagent (4-5) | 20-40K each |
+| Source-Vetter agent | 15-25K |
 | Knowledge gap agent | 15-30K |
 | Contrarian agent | 15-25K |
-| **Total** | **150-300K** |
+| **Total** | **165-325K** |
 
 If the user hasn't explicitly requested deep mode, use standard. Deep mode should feel like hiring a team of researchers, not running a search query.

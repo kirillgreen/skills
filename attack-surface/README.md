@@ -17,6 +17,7 @@ Instead of "summarize these" or "analyze the competition", this framework extrac
 |-------|------|-------------|
 | 1 | Briefing | Interactive conversation to define the research target |
 | 2 | Source Collection | 4-6 parallel AI-powered searches (competitors, reviews, industry reports, emerging players) |
+| 2.5 | Source Vetting | An independent subagent (didn't gather) grades every source on authority × independence, producing a credibility ledger |
 | 3 | Unspoken Insights | "What does every successful player understand that customers never say out loud?" |
 | 4 | Fragile Assumptions | "What assumptions is the market built on, and how do they break?" |
 | 5 | Investor Stress-Test | "5 killer questions to destroy this idea" — then evidence-based answers |
@@ -24,6 +25,8 @@ Instead of "summarize these" or "analyze the competition", this framework extrac
 | 7 | Action Plan | Concrete next steps: this week / this month / this quarter |
 
 Each analytical phase has a checkpoint where you review findings and steer the research.
+
+**Source credibility built in.** Between collection and analysis, a dedicated vetting pass grades each source on two axes — authority (Primary/Secondary/Tertiary) and independence (Independent/Interested/Unknown) — so a polished vendor blog never slides into a strategic conclusion as fact. Interested-party claims are written as "X claims…" and demoted; corroboration counts *independent evidence chains*, not raw citations. The rubric lives in `references/source-credibility.md`.
 
 ## Use Cases
 
@@ -52,9 +55,14 @@ Then invoke it by saying "attack surface" or "research the market" in Claude Cod
 
 ```
 attack-surface/
-├── SKILL.md                          # Main skill definition (7 phases)
+├── SKILL.md                          # Main skill definition (7 phases + a 2.5 vetting firewall)
 ├── README.md                         # This file
-└── references/
-    ├── gatherer-prompt.md            # Subagent prompts for source collection
-    └── analyst-prompt.md             # Subagent prompts for analysis phases
+├── references/
+│   ├── gatherer-prompt.md            # Subagent prompts for source collection
+│   ├── vetting-prompt.md             # Subagent prompt for the Phase 2.5 source-vetting pass
+│   ├── analyst-prompt.md             # Subagent prompts for analysis phases
+│   └── source-credibility.md         # Two-axis credibility rubric (authority × independence)
+└── evals/
+    ├── evals.json                    # Calibration eval (frozen planted-source dossier)
+    └── fixtures/                     # Frozen dossier + grader answer key for the eval
 ```

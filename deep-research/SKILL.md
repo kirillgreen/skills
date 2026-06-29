@@ -2,7 +2,7 @@
 name: deep-research
 description: >
   Conduct deep, multi-source research on any topic using parallel subagents, Exa search, and adversarial validation.
-  Two modes: /deep-research (standard: 10+ sources, thorough single-agent) and /deep-research deep (multi-agent with 20+ sources, adversarial review, UNION merge).
+  Two modes: /deep-research (standard: 10+ sources, one researcher + a source-vetting pass) and /deep-research deep (multi-agent with 20+ sources, adversarial review, UNION merge).
   Use when the user asks to research a topic, investigate a question, find information across multiple sources,
   compare approaches, understand a domain, or says "research this", "deep dive", "investigate", "find out about",
   "what are the best practices for", "compare options for", "глубокое исследование", "ресерч", "исследуй",
@@ -34,7 +34,7 @@ The user can also specify effort as a number: `/deep-research 15` means "use at 
 
 ## Standard Mode (5 phases)
 
-Single-agent with structured search, source quality filtering, and synthesis. Standard mode should be thorough — don't cut corners on search breadth just because it's not "deep mode." The difference from deep mode is architecture (single-agent vs multi-agent), not ambition.
+A single primary researcher plus a dedicated **source-vetting subagent** (separation of duties — Phase 3.5), with structured search, credibility filtering, and synthesis. Standard mode should be thorough — don't cut corners on search breadth just because it's not "deep mode." The difference from deep mode is scale (one researcher + a vetter vs a multi-agent team), not ambition.
 
 ### Phase 1: Scope
 
@@ -79,20 +79,32 @@ For each promising result, read the **full page** (not snippets). Snippets miss 
 - Extract: key claims, data points, exact quotes, methodology, author credentials
 - Note the **source type**: primary research, industry report, blog post, documentation, forum discussion
 
-**Source quality tiers** (don't let SEO farms dominate your research):
+**Source quality — judge on two axes, not one.** Before scoring any source, read [`references/source-credibility.md`](references/source-credibility.md) (standard mode reads it too — not just deep mode). The one-line trap it prevents: *production polish is not authority* — a glossy corporate blog reads as authoritative and slides into the report as fact. Judge **authority** (Primary/Secondary/Tertiary) and **independence** (Independent/Interested/Unknown) separately.
 
-| Tier | Examples | Use |
+The legacy A/B/C tiers below are the reconciled shorthand (full rules + patches in the rubric):
+
+| Tier | What lands here | Use |
 |------|----------|-----|
-| **A — Authoritative** | Academic papers, official docs, gov data, standards bodies, regulatory filings, practitioner blogs with data | Primary evidence. Cite freely. |
-| **B — Credible** | Reputable journalism, analyst reports with methodology, company tech blogs, conference talks | Supporting evidence. Cross-reference with Tier A when possible. |
-| **C — Supplementary** | Opinion pieces, marketing content, aggregators, forum discussions | Use sparingly. Never as sole source for a claim. |
+| **A — Authoritative** | Primary-Independent: academic papers, official docs, gov data, standards bodies, regulatory filings, and a **disinterested** practitioner's first-party data/benchmarks (raw numbers are Primary; a *vendor's* own data goes in B, not here; cherry-picking still fails claim-binding) | Primary evidence. Cite freely. |
+| **B — Credible** | Secondary-Independent journalism w/ method, analyst reports with disclosed methodology, conference talks — **or** a vendor's own data restated as a claim (Primary-Interested → cite but flag `⚠vendor`) | Supporting. Needs an Independent corroboration chain for any load-bearing claim. |
+| **C — Supplementary** | Tertiary or Interested-Secondary: **company/corporate blogs about their own category**, opinion pieces, marketing content, aggregators, forum/review discussions (`⚠manipulable`) | Use sparingly. Never the sole basis for a claim; write as "X claims…", not fact. |
 | **Exclude** | No author/date, unverifiable, clearly outdated, SEO content farms | Do not cite. |
 
-When a blog post references a study — find the study. Chase primary sources. Secondary sources introduce telephone-game distortion.
+When a blog post references a study — find the study. Chase primary sources (best-effort: if a paywall/opaque synthesis blocks it, flag the claim `secondary-only` rather than assuming the chase succeeded). Secondary sources introduce telephone-game distortion.
 
 **Source diversity rule:** No single domain (e.g., crunchbase.com, techcrunch.com) should account for more than 25% of your sources. If you notice concentration, deliberately search for alternative source ecosystems — academic databases, industry associations, government data, regional publications, practitioner blogs. Concentration = blind spot.
 
 **Geographic awareness:** Default search results skew US/English. If the topic has global relevance, explicitly search for perspectives from other markets (EU, Asia, emerging markets). Add geographic qualifiers to at least one search query per sub-question. A US-only analysis should be flagged as such in the report, not presented as universal.
+
+### Phase 3.5: Independent source vetting
+
+You just collected and skimmed these sources — which means your priors are already anchored to them. Before synthesizing, get a **second opinion from an agent that did not do the collecting** (this is real separation of duties, not you re-reading your own notes and re-approving them).
+
+Launch one `Agent` (general-purpose) as a **Source Vetting** pass: hand it the **extracted source content** (not just a URL list — grading from domain names alone is guessing, not vetting) + the key claims you intend to use, and the rubric `references/source-credibility.md`. Ask it to return, per source, the authority (P/S/T) + independence (Ind/Int/Unknown) + sub-flags, and — for each load-bearing claim — how many *independent* evidence chains actually back it (collapsing echoes). It should default to skepticism and specifically hunt for polished-but-interested sources you may have over-trusted.
+
+**Fail-open:** if the vetter is low-confidence or errors, treat unvetted sources as Unknown=Interested and note "ledger degraded" — never silently trust the raw collection. Fold the ledger into Phase 4 (rank Independent-Primary first; demote interested-only claims to "X claims…").
+
+*(Cheap insurance — one extra subagent. These are the Exa-primary research skills; the spend is the point. Skip only if every source is already Independent-Primary, which is rare — otherwise always run it.)*
 
 ### Phase 4: Synthesize
 
@@ -103,6 +115,7 @@ Combine findings into a coherent answer. This is where mediocre research fails �
 - **Distinguish confidence levels.** Some claims have strong multi-source support; others are single-source speculation.
 - **Surface minority viewpoints.** The consensus answer isn't always right. If credible sources disagree, say so.
 - **Cross-reference:** Every significant claim should appear in 2+ independent sources. Single-source claims get flagged.
+- **Apply the credibility usage rules** (`references/source-credibility.md`): a load-bearing claim resting only on Interested/Unknown sources is written as "X claims…" (never bare fact) and flagged `⚠uncorroborated`; rank Independent-Primary evidence first; corroboration counts *independent chains*, so two sources tracing to the same PR/dataset = one chain, not two. **Deprioritize ≠ delete** — keep the weaker source, annotated.
 
 **Anti-hallucination protocol:**
 - Every factual claim requires a `[N]` citation in the same sentence
@@ -128,9 +141,12 @@ Before finalizing, run the **pre-publish checklist** (ALL must pass):
 4. Major contradictions investigated and explained (not hidden)
 5. Conflicting information resolved or explicitly acknowledged
 6. Could you defend each conclusion if challenged? If not, add evidence or a confidence qualifier
-7. **Citation audit:** every source in the list is cited in the body; every `[N]` in the body has a source. No orphans in either direction
+7. **Citation audit:** every source in the list is cited in the body; every `[N]` in the body has a source (strip any `⚠flag` suffix inside the bracket before matching `[N]`↔Sources). No orphans in either direction
 8. **Source diversity:** no single domain accounts for >25% of sources
 9. **Geographic scope:** if the topic is global, non-US perspectives are represented (or the US-focus is explicitly flagged)
+10. **Credibility gate:** every load-bearing conclusion has ≥1 Independent corroboration chain, OR is explicitly written as "X claims…" / flagged `⚠uncorroborated`. No corporate-blog claim about its own category is restated as bare fact. (A *disinterested* practitioner's reasoning/recommendation may be stated with plain attribution — "Author argues…" — not hedged like a vendor's self-interested claim; the gate targets conflict of interest, not all non-primary content.)
+11. **Anti-Goodhart:** if the topic genuinely has no Independent source, conclusions are stamped low-confidence with the conflict named — and **no** Interested source was reclassified as "Independent" just to pass item 10.
+12. **Exec-summary caveat + accounting:** no Interested-only finding headlines the Executive Summary without a caveat; Research Metadata reports the P/S/T × Independent/Interested distribution.
 
 ---
 
@@ -177,7 +193,7 @@ Output format:
 [Anything unexpected or conflicting]
 
 ## Source List
-[URL, title, type, quality score 1-5]
+[URL, title, type, authority (P/S/T), independence (Ind/Int/Unknown), sub-flags]
 
 Save output to: [workspace path]
 ```
@@ -186,11 +202,13 @@ Launch all research subagents in a **single message** for maximum parallelism.
 
 ### Phase 4: Triangulate
 
-After subagents return, cross-reference findings:
-- Claims supported by 3+ independent sources → high confidence
-- Claims from 2 sources → medium confidence
-- Single-source claims → flag for verification or qualify heavily
+After subagents return, cross-reference findings — weighting by the **Source-Vetter ledger**, and counting **independent evidence chains, not raw sources** (sources tracing to the same PR/dataset/author = one chain):
+- 3+ independent chains, at least one Independent-Primary → high confidence
+- 2 independent chains → medium confidence
+- Single **Independent-Primary** chain → at least medium — thin but trustworthy (rubric rule 6: don't crush a lone strong source like a lone vendor blog)
+- Single **Interested/Unknown** chain, or all-Interested chains → low; flag for verification or qualify heavily ("X claims…")
 - Direct contradictions → investigate deeper (may need additional searches)
+- An interested-only claim never reaches "high confidence" on volume alone — count the chains, not the citations.
 
 ### Phase 5: Knowledge Gap Analysis
 
@@ -206,10 +224,10 @@ Launch targeted follow-up searches to fill gaps. This is the phase that separate
 
 For deep mode, use the **UNION merge technique** — instead of synthesizing findings into a single draft yourself, launch 2-3 subagents that each independently write the **complete report** from the collected evidence. Then merge:
 
-1. Launch 2-3 synthesis subagents, each with access to ALL research findings
+1. Launch 2-3 synthesis subagents, each with access to ALL research findings **and the Source-Vetter ledger** (so each draft already ranks Independent-Primary first and writes interested-only claims as "X claims…")
 2. Each writes a complete draft report independently (different agents emphasize different things)
 3. Merge using UNION logic: keep all unique findings, consolidate duplicates with the most detailed phrasing
-4. Never remove content during merge without explicit justification
+4. Never remove content during merge without explicit justification. **A vetter-demoted source is retained-and-annotated (ranked lower, tagged), never silently dropped** — deprioritize ≠ delete.
 
 This produces richer reports than single-pass synthesis because different agents notice different patterns in the same evidence. The merge step catches anything a single synthesizer would miss.
 
@@ -278,25 +296,28 @@ tags: [relevant, tags]
 ## Contradictions & Open Questions
 {Where sources disagree. What remains uncertain. Why.}
 
-## Confidence Assessment (deep mode only)
+## Confidence Assessment (both modes)
 | Claim | Confidence | Basis |
 |-------|-----------|-------|
-| {claim} | High/Medium/Low | {why — source count, quality, agreement} |
+| {claim} | High/Medium/Low | {why — # of *independent* chains, best source's authority×independence, agreement} |
+
+In standard mode keep this short (your top 3-5 load-bearing claims); in deep mode cover every major conclusion. Confidence is keyed to independent evidence chains and source independence, **not** raw source count.
 
 ## Recommendations
 {Specific, actionable items based on findings}
 
 ## Sources
-1. [{Title}]({URL}) — {type: paper/docs/blog/report}, {quality: 1-5}
+1. [{Title}]({URL}) — {type: paper/docs/blog/report}, {tier: A/B/C}, {independence: Independent/Interested/Unknown}{ ⚠sub-flag if any}
 2. ...
 
 ## Research Metadata
 - **Mode:** standard | deep
-- **Sources consulted:** {N total, N Tier A, N Tier B, N Tier C}
+- **Sources consulted:** {N total} — authority {P:_ S:_ T:_} × independence {Independent:_ Interested:_ Unknown:_}
+- **Load-bearing claims on interested-only evidence:** {N} (the lower the better)
 - **Sub-questions:** {N}
 - **Search queries executed:** {N}
 - **Pages read in full:** {N}
-- **Subagents used:** {N} (deep mode only)
+- **Subagents used:** {N} (deep mode); **source-vetting pass:** yes/no
 - **Adversarial review:** yes/no
 ```
 
@@ -328,7 +349,7 @@ These aren't phases — they're principles that apply throughout.
 | `mcp__exa__crawling_exa` | Read specific URLs | Full page content extraction |
 | `WebFetch` | Read web pages | Fallback for page reading |
 | `WebSearch` | Factual/current searches | Good for recent events, specific facts |
-| `Agent` | Parallel subagents (deep mode) | Launch all in single message |
+| `Agent` | Source-vetting subagent (standard Phase 3.5) + parallel subagents (deep mode) | Launch deep-mode agents in a single message |
 
 ## Output
 

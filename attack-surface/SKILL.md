@@ -26,12 +26,13 @@ Instead of "summarize these" or "analyze the competition", this framework extrac
 
 ## Workflow Overview
 
-7 phases, alternating between automated intelligence gathering and user-guided analysis:
+7 phases plus a Source Vetting firewall (2.5), alternating between automated intelligence gathering and user-guided analysis:
 
 | Phase | Name | Mode | Output |
 |-------|------|------|--------|
 | 1 | Briefing | Interactive | Research brief |
 | 2 | Source Collection | Automated (parallel) | Source dossier |
+| 2.5 | Source Vetting | Automated (firewall) | Credibility ledger |
 | 3 | Unspoken Insights | Automated + checkpoint | Insight report |
 | 4 | Fragile Assumptions | Automated + checkpoint | Assumption map |
 | 5 | Investor Stress-Test | Automated + checkpoint | Stress-test results |
@@ -100,7 +101,11 @@ Read `references/gatherer-prompt.md` for the detailed prompt template to use for
 
 ### After collection
 
-Compile all subagent results into a **Source Dossier** — a structured document with all collected evidence organized by source type. Present a summary to the user:
+Compile all subagent results into a **Source Dossier** — a structured document with all collected evidence organized by source type.
+
+**Compile the raw dossier — do NOT tier it yet.** Organize the evidence by source type with full quotes/data and the basic provenance facts for each source (author, date, publisher, and whether the item is raw data or a claim). Do **not** assign authority/independence tags here: that is the job of the independent **Source Vetting** pass (Phase 2.5), and pre-tagging would anchor that supposedly-fresh judge to your priors. (User-provided sources are included and get tiered in 2.5 too — never dropped, since the user chose them.)
+
+Present a summary to the user:
 
 ```
 Source Dossier Summary:
@@ -110,9 +115,24 @@ Source Dossier Summary:
 - X emerging players identified
 - X user-provided sources crawled
 Key themes so far: [2-3 sentences]
+(Credibility mix is presented after the Phase 2.5 vetting pass, not here.)
 ```
 
 Ask: "Sources collected. Anything you want me to search for specifically before we start analysis? Or should I proceed?"
+
+---
+
+## Phase 2.5: Source Vetting (the firewall — runs before any analysis)
+
+This is the separation-of-duties step that keeps Phase-2 junk from becoming unquestioned ground truth for a strategic bet. **Launch a single `general-purpose` Source Vetting subagent that did NOT gather any of the sources** (a fresh judge, not a gatherer re-approving its own haul). Use the prompt in `references/vetting-prompt.md`.
+
+It independently grades every dossier source against `references/source-credibility.md` and returns a **Credibility Ledger**: `source-ID | URL | Authority (P/S/T) | Independence (Ind/Int/Unknown) | sub-flag (manipulable/⚠vendor) | what it supports | one-line reason`.
+
+**The ledger annotates the dossier; it does not replace it.** Phases 3-6 receive the *full source content* with each item's ledger tags attached (analysts need the quotes/data to analyze — they just now know which sources to trust).
+
+**Fail-open (don't let a bad ledger poison everything).** The vetter is a new single point of failure feeding all downstream phases. If it errors or returns low-confidence, fall **conservative**: treat any unvetted source as **Unknown = Interested**, and write "⚠ ledger degraded" into the report — never silently fall back to trusting the raw dossier. Keep the vetter's judgment **checklist-driven** (author? date? funding signal? data-or-assertion?) so it's mechanical, not vibe, and harder to bias by the same priors that fooled the gatherer.
+
+**Present** the credibility mix to the user (`X Independent / X Interested / X Unknown`, plus any source every later phase will lean on that is interested-only) before proceeding.
 
 ---
 
@@ -176,13 +196,15 @@ For each:
 - **Confidence level** (strong / moderate / weak)
 - **Remaining risk** (what the answer doesn't fully address)
 
+**Also stress-test the evidence base, not just the idea.** A killer question can be "answered" with confident-sounding but interested-party evidence. So add one provenance pass: *which of your own answers depend on Interested/Unknown or single-chain sources?* Re-rate those **WEAK regardless of how much agreeing-but-interested evidence exists** — an all-vendor echo is not a STRONG answer.
+
 ### Iterative Deepening
 
-For any answer rated "weak" confidence, automatically follow up:
+Trigger deepening on **either** weakness — argument weakness **or** provenance weakness:
 
 > "What's the strongest version of this argument and where does it still break?"
 
-Continue until all weak points are either resolved or clearly flagged as genuine risks. This iterative deepening is what separates a 3-hour research sprint from a surface-level analysis.
+For any answer rated "weak" confidence **OR resting on a single/interested-only evidence chain**, automatically follow up with the line above. Continue until all weak points are either resolved (with an Independent chain) or clearly flagged as genuine risks. This iterative deepening is what separates a 3-hour research sprint from a surface-level analysis.
 
 **Checkpoint:** "Here's the stress-test. X questions have strong answers, Y have remaining risks. Want to dig deeper on any of these?"
 
@@ -198,9 +220,11 @@ Now synthesize everything into actionable opportunities:
 
 **Present** as an opportunity matrix:
 
-| Opportunity | Evidence | Risk | Validation Needed | Leverage (1-5) |
-|-------------|----------|------|-------------------|----------------|
-| ... | ... | ... | ... | ... |
+| Opportunity | Evidence | Evidence confidence | Risk | Validation Needed | Leverage (1-5) |
+|-------------|----------|---------------------|------|-------------------|----------------|
+| ... | ... | High/Med/Low | ... | ... | ... |
+
+**Credibility rides in the Evidence-confidence column — it does NOT cap Leverage.** Per the rubric, Leverage stays pure impact/effort (uncapped): a high-impact bet on thin evidence is *high-leverage, low-evidence*, not low-leverage — capping it would flatten ranking in exactly the nascent, all-interested markets this skill targets. Instead: an opportunity whose evidence is interested-only → **Evidence confidence = Low**, and `Validation Needed` must begin "independent corroboration first." State confidence in the prose proportional to evidence independence, not just with a trailing tag — so a high-Leverage / Low-evidence bet reads honestly as "big if true, unproven."
 
 **Checkpoint:** "These are the highest-leverage opportunities I see. Which ones resonate? Should I develop any of them into a concrete action plan?"
 
@@ -213,6 +237,14 @@ Based on user's selections from Phase 6, create a concrete action plan:
 1. **Immediate next steps** (this week)
 2. **Validation experiments** (this month)
 3. **Strategic moves** (this quarter)
+
+### Pre-save checklist (ALL must pass — this skill produces strategic bets, so the bar is high)
+
+1. **Credibility gate:** no Unspoken Insight, Fragile Assumption, or Opportunity rests solely on Interested/Unknown sources without ≥1 Independent corroboration chain — or it is explicitly written as "X claims…" with its **Evidence confidence = Low** (opportunities) / its stress-test answer forced to **WEAK** (single Interested chain). A single *Independent-Primary* chain is not crushed — it warrants MODERATE/medium (rubric rule 6).
+2. **Anti-Goodhart:** if a finding's market has no Independent source at all, it's stamped low-confidence with the conflict named — and **no** Interested source was relabeled "Independent" to pass item 1.
+3. **Echo check:** corroboration counts independent chains; sources tracing to the same PR/dataset = one chain.
+4. **Exec-summary honesty:** no interested-only finding headlines the Executive Summary without a caveat.
+5. **Ledger present:** the Source Credibility Ledger section is filled in.
 
 ### Save the Document
 
@@ -255,6 +287,10 @@ tags: [attack-surface, market-research, {topic-tags}]
 ## Action Plan
 [From Phase 7]
 
+## Source Credibility Ledger
+[From Phase 2.5 vetting — table: Source | Authority (P/S/T) | Independence (Ind/Int/Unknown) | Sub-flag | What it supports]
+[Credibility mix: X Independent / X Interested / X Unknown. Note any conclusion that rests on interested-only evidence.]
+
 ## Raw Sources
 [Links to all sources consulted]
 ```
@@ -268,20 +304,23 @@ Tell the user the file path and offer to discuss any findings further.
 All subagents use the `general-purpose` subagent type via the Agent tool. Read the reference files for detailed prompt templates:
 
 - `references/gatherer-prompt.md` — Prompt template for Phase 2 source collection subagents
+- `references/vetting-prompt.md` — Prompt template for the Phase 2.5 Source Vetting subagent
 - `references/analyst-prompt.md` — Prompt templates for Phases 3-6 analysis subagents
 
 When launching subagents:
 - Phase 2: Launch 4-6 gatherers **in parallel** (one Agent tool call per search focus)
+- Phase 2.5: Launch **1 Source Vetting subagent** — must NOT be one of the gatherers (separation of duties)
 - Phases 3-6: Launch **sequentially** (each builds on prior results)
-- Always pass the full Source Dossier to analysis subagents
+- Always pass the **credibility-annotated dossier** (full source content with each source's Phase-2.5 P/S/T × Ind/Int tag inlined next to its quotes) to analysis subagents — not the flat, unvetted dossier. Also pass the **Credibility Ledger** itself into the Phase-6 Opportunity Mapping agent's `{CREDIBILITY_LEDGER}` slot, so the Evidence-confidence column is grounded in the tags rather than guessed
 - Set `run_in_background: false` for analysis subagents (need results before proceeding)
 
 ### Token Budget
 
-This skill launches 6-10 subagent calls total. Estimated cost:
+This skill launches 7-11 subagent calls total. Estimated cost:
 - Phase 2: 4-6 subagents x ~5-15K tokens each
+- Phase 2.5: 1 vetting subagent x ~10-20K tokens
 - Phases 3-6: 4 subagents x ~10-20K tokens each
-- Total: ~60-150K tokens per full research session
+- Total: ~70-170K tokens per full research session (the vetting pass is the price of not betting strategy on junk sources)
 
 ---
 
@@ -294,4 +333,6 @@ This skill launches 6-10 subagent calls total. Estimated cost:
 | Presenting analysis without evidence | Every insight must cite specific sources |
 | Moving past weak stress-test answers | Always run iterative deepening on weak answers |
 | Forgetting to save | Always save the final document at the end |
-| Ignoring user-provided sources | Crawl them FIRST — the user chose them for a reason |
+| Ignoring user-provided sources | Crawl them FIRST — the user chose them for a reason (but still tier them in the ledger) |
+| Treating a vendor/corporate-blog claim as fact | Tag it Interested; demand an Independent corroboration chain or write it as "X claims…" and demote the score |
+| Letting production polish read as authority | A glossy blog is Interested-Secondary at best — see `references/source-credibility.md` |

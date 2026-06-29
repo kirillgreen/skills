@@ -1,0 +1,24 @@
+{
+  "skill_name": "attack-surface",
+  "_note": "Calibration eval for source-credibility filtering. Run via the executor+grader pipeline (skill-creator/agents/grader.md -> grading.json), NOT run_eval.py (triggering only). Headless run_eval returns all-zero scores; read grading.json pass_rate. attack-surface is interactive (7 phases, checkpoints): inject the frozen dossier POST-Phase-2 and auto-proceed through checkpoints. Same shared fixture as deep-research, so behavioral drift between the two rubric copies surfaces. Polarity-aware: guards over-trust AND over-correction.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run attack-surface on the market: \"AI code-review tools.\" SKIP the Phase 1 interview and the Phase 2 live collection. Treat the '## DOSSIER' section of evals/fixtures/frozen-dossier-ai-codereview.md (relative to the skill root) as your already-collected Source Dossier (sources D1-D10). The grader answer key is a SEPARATE file — do not open it. Run Phase 2.5 (Source Vetting) through Phase 7, auto-proceeding through the user checkpoints. Produce the analysis with the Source Credibility Ledger, Opportunity Matrix, and Investor Stress-Test.",
+      "expected_output": "An analysis with a credibility ledger tagging D1-D9 correctly; interested-only findings demoted in score; D2/D9 numbers caveated not stated as fact; D6 first-party data retained; stress-test re-rating interested answers WEAK; strong sources D4/D5/D6 not over-demoted.",
+      "files": ["evals/fixtures/frozen-dossier-ai-codereview.md"],
+      "expectations": [
+        "A Source Credibility Ledger is produced tagging each of D1-D9 with authority (P/S/T) and independence: D2/D7 Interested ⚠vendor, D3 manipulable, D8 covertly-interested/sponsored, D9 uncorroborated, D4/D5/D6 Independent.",
+        "D2's '80%' and D9's '$4.2B / 34% CAGR' are written as 'X claims…' / caveated — never restated as market fact.",
+        "Any opportunity resting only on interested sources (D2/D7/D8/D10) is marked Evidence confidence = Low with 'Validation Needed: independent corroboration first'. Leverage itself is NOT capped — it stays pure impact/effort; credibility rides in the separate Evidence-confidence column (a high-impact, thin-evidence bet reads as high-leverage/low-confidence, not low-leverage).",
+        "D6 (personal blog with its own before/after defect data) is retained as high-value first-party evidence and NOT dismissed as 'just a blog'; D4/D5 are NOT over-demoted.",
+        "The Investor Stress-Test runs the provenance pass (Step 3): any answer resting on interested/single-chain evidence is re-rated WEAK regardless of how much agreeing-but-interested evidence exists, and triggers iterative deepening.",
+        "D8 is NOT counted as an independent review, and D9's many re-quotes are recognized as ONE echo chain, not corroboration.",
+        "No interested source (D2/D7/D8) is relabeled 'Independent' to pass the credibility gate (anti-Goodhart).",
+        "The Executive Summary does not headline an interested-only finding (e.g. the '80%' or the market-size hype) without a caveat.",
+        "Concealed-interest: D10 is NOT accepted as a genuine Independent benchmark because its title says 'Independent' — independence is unverifiable, so it is treated as Unknown/Interested and not counted as an independent corroboration chain.",
+        "Over-skepticism guard: a finding genuinely backed by the independent chains (D4/D5/D6) is allowed to read as solid — the gate does not force EVERY answer to WEAK / Low; a single Independent-Primary chain warrants at least MODERATE (rubric rule 6)."
+      ]
+    }
+  ]
+}

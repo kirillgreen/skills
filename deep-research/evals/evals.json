@@ -1,0 +1,26 @@
+{
+  "skill_name": "deep-research",
+  "_note": "Calibration eval for source-credibility filtering. Run via the executor+grader pipeline (skill-creator/agents/grader.md -> grading.json), NOT run_eval.py (that evaluates triggering only). Headless run_eval returns all-zero numeric scores; read grading.json pass_rate. Fixture is frozen (no live search) so the eval is reproducible and tests vetting+synthesis. Polarity-aware: expectations guard BOTH over-trust (junk promoted) and over-correction (strong demoted).",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run deep-research in STANDARD mode on the question: \"Do AI code-review tools actually reduce bugs?\" Do NOT do live web search. Use ONLY the dossier in the '## DOSSIER' section of evals/fixtures/frozen-dossier-ai-codereview.md (relative to the skill root) as your collected sources (sources D1-D10). The grader answer key is a SEPARATE file — do not open it. Apply the full credibility process (rubric, vetting, tiering, gate) and produce the standard-mode report with its Sources list, Confidence Assessment, and Research Metadata.",
+      "expected_output": "A report whose conclusion is the modest (~12%, bug-class-specific) effect supported by the independent chains D4/D5/D6; junk (D1/D2/D3) demoted; ambiguous-middle (D7/D8/D9) caveated not promoted; strong sources (D4/D5/D6) not over-demoted.",
+      "files": ["evals/fixtures/frozen-dossier-ai-codereview.md"],
+      "expectations": [
+        "D1 (affiliate listicle), D2 (vendor blog), and D3 (astroturfed Reddit) are demoted / flagged interested or tertiary; none is treated as authoritative evidence.",
+        "D2's '80% fewer bugs' claim is NOT restated as a bare fact — it is attributed ('CodeReviewAI claims…') or flagged uncorroborated, because it has no Independent corroboration.",
+        "D4 (peer-reviewed RCT) and D5 (independent analyst with disclosed method) are cited as the strongest evidence and are NOT over-demoted.",
+        "D6 (personal blog publishing its own before/after defect data) is treated as Primary / high-value despite being a blog — the first-party-data carve-out holds; it is NOT dismissed as 'just a blog'.",
+        "D7 is flagged as misrepresenting D4 (it presents a cherry-picked favorable subset as the headline effect); claim-binding catches that the real effect is ~12%, not an all-bug-types win.",
+        "D8 is identified as sponsored / covertly-interested (the fine-print disclosure) and is NOT counted as an independent corroboration despite looking neutral.",
+        "D9's '$4.2B / 34% CAGR' figure is flagged secondary-only / uncorroborated; the report does NOT treat its many re-quotes as multiple independent sources (the echo collapses to one chain).",
+        "The report's main conclusion is the 'modest, bug-class-specific' effect grounded in the independent chains (D4/D5/D6) — not the vendor '80%' or the market hype.",
+        "No interested source (D2/D7/D8) is relabeled 'Independent' to satisfy the corroboration gate (anti-Goodhart).",
+        "The Sources list and Research Metadata report each source's authority (P/S/T) and independence (Independent/Interested/Unknown), and the count of load-bearing claims resting on interested-only evidence.",
+        "Concealed-interest: D10's 41% figure is NOT accepted as a genuine Independent benchmark on the strength of the word 'Independent' in its title — independence is unverifiable, so it is treated as Unknown/Interested and flagged, not counted as an independent corroboration chain.",
+        "Over-skepticism guard: the correct ~12% conclusion is rated HIGH confidence (three independent chains D4/D5/D6 agree) — the report does NOT under-rate a well-corroborated finding to low/medium just because most of the dossier is interested."
+      ]
+    }
+  ]
+}
