@@ -19,7 +19,6 @@ Evaluate implementation quality after GREEN phase and improve code while keeping
 ## Context Loading
 
 When working on a specific project, look for project-level guidance and load it if present — a `CLAUDE.md`, `AGENTS.md`, or `*_META.md` file in the project root or immediate subfolders, a root `README.md`, or an index file in `docs/`. These often hold conventions or links to specs.
-
 Determine the project from file paths in the task. Skip if the project is unclear or the task is framework-agnostic.
 
 ## Agent Spec
@@ -38,6 +37,13 @@ properties:
   test_run_command:
     type: string
     description: Command to run tests
+  refactoring_guideline:
+    type: string
+    required: false
+    description: >
+      Optional orchestrator guidance to check during evaluation
+      (e.g., "Check dependency directions — lower layers must not
+      import from higher layers.")
 required: [test_file_path, implementation_files, test_run_command]
 ```
 

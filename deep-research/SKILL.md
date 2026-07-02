@@ -32,7 +32,7 @@ The user can also specify effort as a number: `/deep-research 15` means "use at 
 
 ---
 
-## Standard Mode (5 phases)
+## Standard Mode (5 phases + Phase 3.5 vetting)
 
 A single primary researcher plus a dedicated **source-vetting subagent** (separation of duties — Phase 3.5), with structured search, credibility filtering, and synthesis. Standard mode should be thorough — don't cut corners on search breadth just because it's not "deep mode." The difference from deep mode is scale (one researcher + a vetter vs a multi-agent team), not ambition.
 
@@ -100,9 +100,9 @@ When a blog post references a study — find the study. Chase primary sources (b
 
 You just collected and skimmed these sources — which means your priors are already anchored to them. Before synthesizing, get a **second opinion from an agent that did not do the collecting** (this is real separation of duties, not you re-reading your own notes and re-approving them).
 
-Launch one `Agent` (general-purpose) as a **Source Vetting** pass: hand it the **extracted source content** (not just a URL list — grading from domain names alone is guessing, not vetting) + the key claims you intend to use, and the rubric `references/source-credibility.md`. Ask it to return, per source, the authority (P/S/T) + independence (Ind/Int/Unknown) + sub-flags, and — for each load-bearing claim — how many *independent* evidence chains actually back it (collapsing echoes). It should default to skepticism and specifically hunt for polished-but-interested sources you may have over-trusted.
+Launch one `Agent` (general-purpose) as a **Source Vetting** pass: hand it the **extracted source content** (not just a URL list — grading from domain names alone is guessing, not vetting) + the key claims you intend to use, and the rubric `references/source-credibility.md` — but **not your own tier judgments** (pre-tagging would anchor the second opinion). Ask it to return, per source, the authority (P/S/T) + independence (Ind/Int/Unknown) + sub-flags, and — for each load-bearing claim — how many *independent* evidence chains actually back it (collapsing echoes). It should default to skepticism and specifically hunt for polished-but-interested sources you may have over-trusted.
 
-**Fail-open:** if the vetter is low-confidence or errors, treat unvetted sources as Unknown=Interested and note "ledger degraded" — never silently trust the raw collection. Fold the ledger into Phase 4 (rank Independent-Primary first; demote interested-only claims to "X claims…").
+**Fail-safe (conservative degrade):** graded by the vetter's self-reported confidence — **high** → use the ledger as-is; **medium** → degrade only the rows the vetter marked uncertain (`?`) to Unknown=Interested and name them; **low or error** → treat ALL unvetted sources as Unknown=Interested and note "ledger degraded". Never silently trust the raw collection. (Ask the vetter to self-report confidence and to mark any row it cannot confidently grade with `?`.) Fold the ledger into Phase 4 (rank Independent-Primary first; demote interested-only claims to "X claims…").
 
 *(Cheap insurance — one extra subagent. These are the Exa-primary research skills; the spend is the point. Skip only if every source is already Independent-Primary, which is rare — otherwise always run it.)*
 
@@ -152,7 +152,7 @@ Before finalizing, run the **pre-publish checklist** (ALL must pass):
 
 ## Deep Mode (8 phases)
 
-For high-stakes research where being wrong is expensive. Read `references/deep-mode.md` for detailed subagent instructions before proceeding.
+For high-stakes research where being wrong is expensive. Read `references/deep-mode.md` for detailed subagent instructions before proceeding. (Phase numbering: the Source-Vetter runs as Phase 3.5 — after Parallel Retrieve, before Triangulate.)
 
 ### Phase 1: Scope & Decompose
 
@@ -193,12 +193,16 @@ Output format:
 [Anything unexpected or conflicting]
 
 ## Source List
-[URL, title, type, authority (P/S/T), independence (Ind/Int/Unknown), sub-flags]
+[URL, title, type, author, date, publisher, funding/stake signal, data-or-claim — provenance FACTS only; do NOT assign authority/independence tags: the Source-Vetter grades independently, and pre-tagging would anchor it]
 
 Save output to: [workspace path]
 ```
 
 Launch all research subagents in a **single message** for maximum parallelism.
+
+### Phase 3.5: Source Vetting (firewall)
+
+After the research subagents return and before Triangulate, launch the **Source-Vetter** — one subagent that did NOT gather (separation of duties). Give it every collected source's content + provenance facts (not the gatherers' judgments) and the rubric `references/source-credibility.md`; it returns the credibility ledger that Phases 4-6 weight by. Full prompt and the fail-safe rule: `references/deep-mode.md` ("Source-Vetter" section).
 
 ### Phase 4: Triangulate
 

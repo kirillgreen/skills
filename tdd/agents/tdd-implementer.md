@@ -20,12 +20,11 @@ Write the minimum code needed to make all failing tests pass. NEVER modify test 
 
 Beyond writing minimal passing code, this agent does two extra things:
 1. Output schema includes `spec_defect: true|false` + `spec_defect_reason`
-2. The "5 failed attempts → status: failed" escape route is replaced by Spec Defect Detection (Step 3.5) — escalate to the orchestrator via `spec_defect: true` rather than ending in a `failed` state when the cause is spec ambiguity, not implementation difficulty
+2. Spec Defect Detection (Step 3.5) takes precedence over the "5 failed attempts → status: failed" route — escalate via `spec_defect: true` rather than ending in a `failed` state when the cause is spec ambiguity, not implementation difficulty
 
 ## Context Loading
 
 When working on a specific project, look for project-level guidance and load it if present — a `CLAUDE.md`, `AGENTS.md`, or `*_META.md` file in the project root or immediate subfolders, a root `README.md`, or an index file in `docs/`. These often hold conventions or links to specs.
-
 Determine the project from file paths in the task. Skip if the project is unclear or the task is framework-agnostic.
 
 ## Agent Spec

@@ -62,7 +62,7 @@ Research Brief:
 - Known competitors: [list]
 - User sources: [list of URLs/files]
 - Key questions: [specific questions beyond standard framework]
-- Project context: [if applicable, key facts about the user's product]
+- Project context: [if applicable, key facts from META]
 ```
 
 Ask user to confirm before proceeding to Phase 2.
@@ -130,7 +130,7 @@ It independently grades every dossier source against `references/source-credibil
 
 **The ledger annotates the dossier; it does not replace it.** Phases 3-6 receive the *full source content* with each item's ledger tags attached (analysts need the quotes/data to analyze — they just now know which sources to trust).
 
-**Fail-open (don't let a bad ledger poison everything).** The vetter is a new single point of failure feeding all downstream phases. If it errors or returns low-confidence, fall **conservative**: treat any unvetted source as **Unknown = Interested**, and write "⚠ ledger degraded" into the report — never silently fall back to trusting the raw dossier. Keep the vetter's judgment **checklist-driven** (author? date? funding signal? data-or-assertion?) so it's mechanical, not vibe, and harder to bias by the same priors that fooled the gatherer.
+**Fail-safe (don't let a bad ledger poison everything).** The vetter is a new single point of failure feeding all downstream phases. Respond to its self-reported confidence on a graded scale: **high** → use the ledger as-is; **medium** → use the ledger, but degrade the specific rows the vetter marked uncertain (`?`, missing author/date, "can't determine") to **Unknown = Interested** and name them in the report; **low or error** → treat ALL unvetted sources as **Unknown = Interested** and write "⚠ ledger degraded" into the report. Never silently fall back to trusting the raw dossier. Keep the vetter's judgment **checklist-driven** (author? date? funding signal? data-or-assertion?) so it's mechanical, not vibe, and harder to bias by the same priors that fooled the gatherer.
 
 **Present** the credibility mix to the user (`X Independent / X Interested / X Unknown`, plus any source every later phase will lean on that is interested-only) before proceeding.
 

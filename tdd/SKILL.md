@@ -172,7 +172,7 @@ If existing doc is found but lacks structured acceptance criteria, extract them 
 
 #### 1b. Write Spec (when no spec exists)
 
-Write a structured spec and present it to the user for confirmation.
+Write a structured spec, print it, and auto-lock — confidence-gated, see "Print the spec and auto-lock" below.
 
 **Spec format (what to write — fill in the bracketed sections, don't copy this guidance text into the spec itself):**
 
@@ -284,9 +284,15 @@ For each matched AC — emit a finding and surface it at lock time:
 
 Record user choice in cycle state as `page_level_ac_resolution: "e2e-added" | "acknowledged" | "rescoped" | "none"` (`none` only when no page-level ACs were detected). Append findings to the ledger with `tier: WARNING`, `check: "page-level-ac"`, `phase: "step-1b"`. If user picks `acknowledged`, mark each finding `acknowledged: true` with reason.
 
-**Present the spec to the user and wait for confirmation before proceeding.**
+**Print the spec and auto-lock — do NOT wait for confirmation.** Showing the spec is for visibility; the cycle proceeds immediately (blanket spec-approval waits add friction without adding safety). State: `Spec locked (N criteria) — proceeding to RED.`
 
-If user modifies the spec — incorporate changes. If user says "proceed" — lock the spec.
+**Escalate (show the spec and wait for the user) ONLY when a confidence trigger fires:**
+1. **Unresolved ambiguity** — the DETAIL/smell check surfaced two plausible readings of the user's request that produce different criteria, and you cannot pick one without guessing intent.
+2. **Page-level ACs detected** — the (a)/(b)/(c) choice in Page-Level AC Detection belongs to the user (this trigger is already built into that check).
+3. **Doc-extracted spec diverges** — the spec came from an existing doc (1a) and is narrower/broader than what the user actually asked for.
+4. **User asked to review** — "review the spec first", "show me the spec", or similar.
+
+If the user interjects with spec changes at any point — incorporate them and re-lock.
 
 <!-- mode-fork -->
 **Prompt-only escape:** If the user says "skip the spec", "prompt-only", "just code it", or otherwise declines a structured spec, accept prompt-only mode:
@@ -295,11 +301,11 @@ If user modifies the spec — incorporate changes. If user says "proceed" — lo
 - Pass the user's raw feature requirement to the test-writer in place of the locked spec
 - Skip Step 4 (Spec Verification) — note "prompt-only mode" in the Final Report
 
-Use prompt-only when the feature is small enough that writing a structured spec adds more friction than value (e.g., a one-off animation, CSS tweak, or developer utility). Phase Violations rule "NEVER write tests before spec is confirmed" is satisfied by the user's explicit prompt-only choice.
+Use prompt-only when the feature is small enough that writing a structured spec adds more friction than value (e.g., a one-off animation, CSS tweak, or developer utility). Phase Violations rule "NEVER write tests before the spec is locked" is satisfied by the user's explicit prompt-only choice.
 
 #### 1c. Locked Spec
 
-After user confirmation, the spec is **locked** for this TDD cycle. Store the full spec text as `locked_spec` — it will be passed to the test-writer and used for final verification.
+After the auto-lock (or, when a confidence trigger fired, after the user dialog resolves), the spec is **locked** for this TDD cycle. Store the full spec text as `locked_spec` — it will be passed to the test-writer and used for final verification.
 
 The locked spec contains:
 - Numbered criteria (AC-1, AC-2, ... EC-1, ... ERR-1, ...)
@@ -307,7 +313,7 @@ The locked spec contains:
 
 ### Phase 1: RED -- Write Failing Tests
 
-Invoke `tdd-test-writer` agent via Task tool with `subagent_type: "tdd-test-writer"`.
+Invoke `tdd-test-writer` agent via the Agent tool with `subagent_type: "tdd-test-writer"`.
 
 The exact agent inputs depend on `spec_traceability` mode (see Step 1b). The two modes share most inputs but differ on traceability instructions:
 
@@ -362,9 +368,9 @@ Before proceeding to GREEN, verify test quality. Each finding is tagged with its
    - Swift: `Mock`, `Stub`, `@Mock`
 
    If mocking found in a pure-module test — emit:
-   > "[WARNING] Test for pure utility uses mocking. Consider testing via inputs->outputs instead. Proceed anyway?"
+   > "[WARNING] Test for pure utility uses mocking. Consider testing via inputs->outputs instead."
 
-   Wait for user confirmation before continuing.
+   Append to the ledger and continue — WARNING never blocks (see Severity Levels).
 
 2. **Test isolation check** [CRITICAL]: Grep the test file's import paths. If any imported module doesn't exist on disk — the test fails on import errors, not assertions. This is CRITICAL because the RED gate is meaningless: the test isn't proving the feature is missing, it's failing on a broken import. Emit:
    > "[CRITICAL] Test imports [path] which doesn't exist. Tests will fail on missing module, not assertion mismatch. Re-invoke test-writer to add stubs?"
@@ -398,7 +404,9 @@ Analyze the test file to determine expected implementation scope:
    - src/types/file.ts (modify — type used in test)
    ```
 
-Invoke `tdd-implementer` agent via Task tool with `subagent_type: "tdd-implementer"`:
+   `action: "create"` means "this cycle owns the file's initial implementation" — it still applies when RED already created an empty stub for the module (the stub is a RED artifact of this cycle, not pre-existing code).
+
+Invoke `tdd-implementer` agent via the Agent tool with `subagent_type: "tdd-implementer"`:
 
 **Pass to agent (typed inputs per `tdd-implementer.md` Input schema):**
 - `test_file_path`: absolute path to the failing test file (from Phase 1)
@@ -463,7 +471,7 @@ Choose (d) when failures cluster around a single criterion that turns out to be 
 
 ### Phase 3: REFACTOR -- Improve Code
 
-Invoke `tdd-refactorer` agent via Task tool with `subagent_type: "tdd-refactorer"`:
+Invoke `tdd-refactorer` agent via the Agent tool with `subagent_type: "tdd-refactorer"`:
 
 **Pass to agent:**
 - Test file path
@@ -512,7 +520,7 @@ using the project's actual tooling. This catches regressions that `--changed` mi
 
 **GATE: Tests + type check + build must all pass. Lint is advisory (warn but don't block).**
 
-On pass: `touch .tdd-gate-passed` in the project root so the Stop hook skips redundant verification.
+On pass: `touch .tdd-gate-passed` **in the session's working directory** so a Stop-hook verification gate (if your setup has one) can consume it. The marker must be created exactly where the gate looks for it (typically the session's `$CWD`, which is not always the project root) — a marker nobody consumes is never cleaned up and can falsely absolve a later session.
 
 **Report the gate result:**
 ```
@@ -755,7 +763,7 @@ Feature 2: SPEC -> RED -> GREEN -> REFACTOR -> VERIFY (complete)
 
 These are HARD rules — never break them:
 
-- NEVER write tests before spec is confirmed (or user explicitly chose prompt-only)
+- NEVER write tests before the spec is locked (or user explicitly chose prompt-only)
 - NEVER write implementation before tests exist and fail
 - NEVER modify test files during GREEN phase
 - NEVER skip REFACTOR evaluation
@@ -778,19 +786,19 @@ These are HARD rules — never break them:
    EC-1: formatFileSize(0) returns "0 B"
    ERR-1: formatFileSize(-1) throws RangeError
    ```
-   User confirms → spec locked (5 criteria)
-3. RED: test-writer creates `__tests__/formatFileSize.test.ts` with 5 tests (AC-1 through ERR-1) — all FAIL
+   Spec printed, no confidence triggers → auto-locked (5 criteria)
+3. RED: test-writer creates `__tests__/formatFileSize.test.ts` with 5 tests (AC-1 through ERR-1) plus an empty stub `utils/formatFileSize.ts` — all FAIL on assertions
 4. Spec coverage check: 5/5 criteria have tests — proceed
-5. GREEN: implementer creates `utils/formatFileSize.ts` — all tests PASS, `spec_defect: false`
+5. GREEN: implementer fills `utils/formatFileSize.ts` — all tests PASS, `spec_defect: false`
 6. REFACTOR: refactorer extracts shared number formatting — tests still PASS
 7. Spec verification (3 dimensions): Completeness 5/5 · Traceability 5/5 MATCHED · Coherence: constraints honored, no pattern deviations
 8. Report: "TDD cycle complete. Findings: 0 CRITICAL · 0 WARNING · 0 SUGGESTION."
 
-### User says: "/tdd implement yacht search filtering" (existing spec doc)
+### User says: "/tdd implement product search filtering" (existing spec doc)
 
 1. Stack detected: Vitest
 2. Spec phase: found `docs/vector-search.md` in the project — extracts 7 acceptance criteria from the doc
-   User confirms extracted criteria → spec locked
+   Extracted criteria match the request (no divergence trigger) → printed and auto-locked
 3. RED: tests generated from spec criteria (AC-1 through AC-7)
 4. Spec coverage check: 7/7 — proceed
 5. GREEN → REFACTOR → 3-dim verification: Completeness 7/7 · Traceability 6/7 (AC-5 UNMATCHED [SUGGESTION] — investigate whether impl uses different vocabulary) · Coherence: 1 pattern deviation [SUGGESTION]
@@ -799,7 +807,7 @@ These are HARD rules — never break them:
 ### User says: "/tdd add card flip animation" (user chooses prompt-only)
 
 1. Stack detected: Vitest
-2. Spec phase: no relevant doc found → offer to write spec
+2. Spec phase: no relevant doc found → start writing spec
 3. User says "skip the spec, just code it" → prompt-only mode accepted, `spec_traceability: "prompt-only"`, Step 4 skipped
 4. RED → GREEN → REFACTOR → cycle complete (no spec verification)
 5. Report: "Verification: skipped (prompt-only mode)"
@@ -807,7 +815,7 @@ These are HARD rules — never break them:
 ### User says: "/tdd add user avatar upload" (spec written, partial coverage)
 
 1. Stack detected: Vitest
-2. Spec phase: write spec with 6 criteria → user confirms
+2. Spec phase: write spec with 6 criteria → printed, auto-locked
 3. RED: test-writer creates 4 tests (covers AC-1, AC-2, EC-1, ERR-1)
 4. Spec coverage check: 4/6 — warn user: "Missing: AC-3 (resize to 200x200), AC-4 (reject files >5MB)"
 5. User says "proceed anyway" → continue with 4 tests
@@ -834,7 +842,6 @@ These are HARD rules — never break them:
 
 - `references/anti_patterns.md` — TDD anti-patterns with code examples (phase violations, over-mocking, structural, dependency)
 - `references/framework_configs.md` — detection rules, run commands, and test skeletons per framework
-- `testing-patterns` skill — broader testing strategy (Testing Trophy, MSW, golden file testing)
 - `tdd-test-writer` agent — RED phase details
 - `tdd-implementer` agent — GREEN phase details
 - `tdd-refactorer` agent — REFACTOR phase details

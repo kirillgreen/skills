@@ -69,7 +69,7 @@ Built from research into the top open-source deep research implementations (199-
 
 - **Breadth-first search** — start broad, narrow as uncertainty drops
 - **Two-axis source credibility** — authority (Primary/Secondary/Tertiary) × independence (Independent/Interested/Unknown); production polish ≠ authority; reconciled with the legacy A/B/C tiers in `references/source-credibility.md`
-- **Independent vetting pass** — a second agent that didn't gather grades the sources (separation of duties); fails-open to Unknown=Interested
+- **Independent vetting pass** — a second agent that didn't gather grades the sources (separation of duties); degrades safely (unvetted → Unknown=Interested)
 - **Independent evidence chains** — corroboration counts chains, not citations (two sources tracing to one PR = one chain)
 - **Anti-hallucination protocol** — every claim needs `[N]` citation in same sentence
 - **Citation hygiene** — no orphan sources, no phantom references

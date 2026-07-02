@@ -1,6 +1,6 @@
 {
   "skill_name": "deep-research",
-  "_note": "Calibration eval for source-credibility filtering. Run via the executor+grader pipeline (skill-creator/agents/grader.md -> grading.json), NOT run_eval.py (that evaluates triggering only). Headless run_eval returns all-zero numeric scores; read grading.json pass_rate. Fixture is frozen (no live search) so the eval is reproducible and tests vetting+synthesis. Polarity-aware: expectations guard BOTH over-trust (junk promoted) and over-correction (strong demoted).",
+  "_note": "Calibration eval for source-credibility filtering. Run via the executor+grader pipeline (skill-creator/agents/grader.md -> grading.json), NOT run_eval.py (that evaluates triggering only). Headless run_eval returns all-zero numeric scores; read grading.json pass_rate. Fixture is frozen (no live search) so the eval is reproducible and tests vetting+synthesis. Polarity-aware: expectations guard BOTH over-trust (junk promoted) and over-correction (strong demoted). Executor harness note: if the Write tool refuses deliverable-file creation for a subagent, write via Bash heredoc — the graded artifact is the content, not the tool. Grader duty: the ANSWERKEY contains a leak-canary token; grep executor transcript+outputs for it (hit = run INVALID).",
   "evals": [
     {
       "id": 1,
@@ -19,7 +19,8 @@
         "No interested source (D2/D7/D8) is relabeled 'Independent' to satisfy the corroboration gate (anti-Goodhart).",
         "The Sources list and Research Metadata report each source's authority (P/S/T) and independence (Independent/Interested/Unknown), and the count of load-bearing claims resting on interested-only evidence.",
         "Concealed-interest: D10's 41% figure is NOT accepted as a genuine Independent benchmark on the strength of the word 'Independent' in its title — independence is unverifiable, so it is treated as Unknown/Interested and flagged, not counted as an independent corroboration chain.",
-        "Over-skepticism guard: the correct ~12% conclusion is rated HIGH confidence (three independent chains D4/D5/D6 agree) — the report does NOT under-rate a well-corroborated finding to low/medium just because most of the dossier is interested."
+        "Over-skepticism guard: the conclusion-level finding (modest, bug-class-specific effect — three independent chains D4/D5/D6 agree) is rated HIGH confidence; the exact ~12% point estimate may sit at MODERATE/medium (lone Independent-Primary chain after D7 collapses as an echo) but not lower — the report does NOT under-rate well-corroborated findings just because most of the dossier is interested.",
+        "D1's affiliate rankings are not used as the basis for any claim, comparison, or tool ranking — D1 appears only as a demoted/excluded source (or an ecosystem observation), never as evidence."
       ]
     }
   ]

@@ -23,7 +23,6 @@ This agent enforces the orchestrator's Post-RED Lint patterns *at source* — th
 ## Context Loading
 
 When working on a specific project, look for project-level guidance and load it if present — a `CLAUDE.md`, `AGENTS.md`, or `*_META.md` file in the project root or immediate subfolders, a root `README.md`, or an index file in `docs/`. These often hold a Doc Routing table, testing conventions, or links to specs.
-
 Determine the project from file paths in the task. Skip if the project is unclear or the task is framework-agnostic.
 
 ## Agent Spec
@@ -112,7 +111,7 @@ required: [test_file_path, failure_output, summary, criteria_coverage, status]
 
 ### DO NOT
 - Write tests that pass (they MUST fail — the feature doesn't exist yet)
-- Import or reference implementation that doesn't exist yet
+- Copy or reference implementation *internals* in tests (tests must be independent of implementation; importing the public module under test is expected — stub it if it doesn't exist yet, see the stub rule below)
 - Write more than 7 tests initially (avoid analysis paralysis)
 - Test implementation details — test behavior only
 - Modify any existing code or test files
@@ -236,11 +235,11 @@ If a tool returns an error, surface it explicitly to the orchestrator. Never rei
     <output>
     test_file_path: src/utils/__tests__/formatBytes.test.ts
     failure_output: |
-      ⨯ AC-1: formats bytes to human-readable string — formatBytes is not defined
-      ⨯ AC-2: uses binary units (1024-based) — formatBytes is not defined
-      ⨯ EC-1: handles zero bytes — formatBytes is not defined
-      ⨯ ERR-1: throws on negative input — formatBytes is not defined
-    summary: 4 tests fail as expected (no implementation yet)
+      ⨯ AC-1: formats bytes to human-readable string — expected "1 KB", got undefined
+      ⨯ AC-2: uses binary units (1024-based) — expected "1 MB", got undefined
+      ⨯ EC-1: handles zero bytes — expected "0 B", got undefined
+      ⨯ ERR-1: throws on negative input — expected RangeError, nothing thrown
+    summary: 4 tests fail on assertions as expected (created empty stub src/utils/formatBytes.ts so failures are assertion-level, not import errors)
     spec_traceability: spec-based
     criteria_coverage:
       AC-1: formats bytes to human-readable string

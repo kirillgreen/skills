@@ -37,7 +37,7 @@ Each subagent needs:
 | **Source-Vetter** | **Credibility firewall** | **N/A** | **Independently grades all collected sources (authority × independence) BEFORE Triangulate — must not be one of the Research agents (separation of duties)** |
 | Contrarian | Adversarial review | N/A | Attacks the draft (Phase 7) |
 
-**Source-Vetter (runs after Parallel Retrieve, before Triangulate).** Once the Research agents return, launch one Source-Vetter that did NOT gather. Give it every source + the rubric `references/source-credibility.md`. It returns a credibility ledger (per source: P/S/T × Ind/Int/Unknown + sub-flags) and, per load-bearing claim, the count of *independent* evidence chains (echoes collapsed). Triangulate then weights by the ledger, not by raw source count. **Fail-open:** a low-confidence/errored ledger → treat unvetted sources as Unknown=Interested and flag "ledger degraded"; never silently trust the raw haul.
+**Source-Vetter (runs after Parallel Retrieve, before Triangulate).** Once the Research agents return, launch one Source-Vetter that did NOT gather. Give it every source + the rubric `references/source-credibility.md`. It returns a credibility ledger (per source: P/S/T × Ind/Int/Unknown + sub-flags) and, per load-bearing claim, the count of *independent* evidence chains (echoes collapsed). Triangulate then weights by the ledger, not by raw source count. **Fail-safe:** graded — a high-confidence ledger is used as-is; medium → degrade only the vetter's `?`-marked uncertain rows to Unknown=Interested; low/error → treat ALL unvetted sources as Unknown=Interested and flag "ledger degraded"; never silently trust the raw haul.
 
 ### Subagent Launch Template
 
@@ -74,12 +74,14 @@ Do NOT duplicate their work.
 - Prefer: academic papers, official documentation, practitioner blogs, industry reports
 - Avoid: SEO content farms, undated listicles, anonymous opinion pieces
 
-### Source Tagging (two axes, per `references/source-credibility.md` — not a single 1-5 score)
-For each source, tag both axes:
-- **Authority:** P (primary — original data/research/official docs/first-party datasets), S (secondary — named-author journalism or analyst report with disclosed method), T (tertiary — aggregator/SEO/undated/anonymous)
-- **Independence:** Independent (no stake) · Interested (vendor/competitor/PR/affiliate writing about its own category) · Unknown
-- **Sub-flags:** `manipulable` (reviews/forums), `⚠vendor` (a seller's own claim), `secondary-only` (couldn't reach the primary)
-Production polish is not authority — a glossy vendor blog is Interested-Secondary at best. Emit raw provenance facts here; the Source-Vetter does the authoritative grading.
+### Source Provenance (facts only — do NOT assign tags)
+For each source, record the provenance FACTS the Source-Vetter will grade from:
+- **Author/publisher** — named or anonymous?
+- **Publication date**
+- **Funding/stake signal** — does the publisher sell, invest in, or compete in what the claim is about?
+- **Data or claim** — raw first-party data, or an interpretive claim?
+- **UGC flag** — review/forum source (Reddit, G2, Trustpilot, App Store)?
+Do NOT assign authority (P/S/T) or independence (Ind/Int/Unknown) tags yourself — grading is the Source-Vetter's job, and pre-tagging would anchor that supposedly-fresh judge to your priors (same rule as attack-surface Phase 2). Production polish is not authority — note the polish if it strikes you, but let the vetter judge.
 
 ### Output Format
 Save your findings to the specified path. Use this structure:
@@ -88,7 +90,7 @@ Save your findings to the specified path. Use this structure:
 ### Answer
 {Your synthesis}
 ### Evidence
-- {Claim}: {evidence} [Source: {url}, {P/S/T} × {Ind/Int/Unknown}{, sub-flag}]
+- {Claim}: {evidence} [Source: {url}, author, date, {data|claim}{, funding-signal note}]
 ### Confidence: High/Medium/Low
 ### Reasoning: {why this confidence level}
 
@@ -102,8 +104,8 @@ Save your findings to the specified path. Use this structure:
 {What you couldn't find good answers for}
 
 ## Source Index
-| # | URL | Title | Authority (P/S/T) | Independence (Ind/Int/Unknown) | Sub-flags |
-{table of all sources consulted}
+| # | URL | Title | Author | Date | Funding/stake signal | Data-or-claim | UGC? |
+{table of all sources consulted — provenance facts only, no P/S/T × Ind/Int tags}
 """)
 ```
 
