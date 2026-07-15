@@ -174,13 +174,27 @@ If existing doc is found but lacks structured acceptance criteria, extract them 
 
 Write a structured spec, print it, and auto-lock — confidence-gated, see "Print the spec and auto-lock" below.
 
+**Spec depth ∝ risk — decide before writing.** Match spec rigor to how expensive a bug in *this* feature is — the higher the blast radius, the deeper the spec. It's the same instinct you'd apply to any high-stakes change: auth/payments/migrations earn more scrutiny than a cosmetic tweak.
+
+| Risk tier | Examples | Spec depth |
+|---|---|---|
+| **High** | payments, money math, auth/session, DB/schema migrations, security boundaries, irreversible data mutations, cross-project contracts | Max: exhaustive ECs/ERRs, explicit Constraints (perf/security/data-integrity), every boundary enumerated. Page-level ACs almost always warrant option (a) E2E — still surface the (a)/(b)/(c) choice, don't auto-pick. |
+| **Medium** | typical feature work, CRUD, UI state, API endpoints | Default: the 3-7 AC / 1-3 EC / 1 ERR format below. |
+| **Low** | pure utilities, cosmetic/CSS, dev tooling, one-off scripts | Min: a 2-3 AC spec. (Prompt-only is **user-initiated only** — see the escape below; never self-select it from this row.) |
+
+**Classify by blast radius, not size — highest tier wins.** When a feature matches more than one row, take the higher. A one-off script or "just a dev tool" that touches auth, money/payments, migrations, schema, deletes or otherwise-irreversible data, or a cross-project contract is **High, not Low**, however small it looks. If the request mentions any of those, treat it as High for spec depth regardless of your first-glance tier call — this keyword check runs independently of your risk judgment, so a mislabel can't suppress it.
+
+Guard both ends explicitly:
+- **Over-spec** — the spec enumerates *how* (implementation steps) and becomes pseudo-code. Wastes tokens, over-constrains the implementer, rots on the next code change. Specify behavior and boundaries, never mechanism.
+- **Under-spec** — a High-risk feature gets a thin spec, leaving critical behavior to interpretation. This is where the expensive bugs enter. For High-risk, **≥4 ACs + 1 ERR is a floor, not proof**: each AC must cover a *distinct* risk surface (each security boundary, each irreversible mutation, each money-math edge), never pad the count to clear the number. A genuinely single-behavior High-risk feature reaches depth by enumerating its failure and boundary cases, not by inventing filler ACs.
+
 **Spec format (what to write — fill in the bracketed sections, don't copy this guidance text into the spec itself):**
 
 > **Description guidance** (write this into the spec body, do NOT include this guidance line): 1-4 paragraphs of 40-80 words each describing the system behavior the user wants and the approach for implementation.
 >
 > **Section guidance:**
 > - Each AC/EC/ERR is one bullet. One behavior per bullet. Concrete inputs and expected outputs, no "etc." or "and similar".
-> - 3-7 ACs total, plus 1-3 ECs and 1 ERR when applicable.
+> - 3-7 ACs total, plus 1-3 ECs and 1 ERR when applicable (Medium-tier default; High-risk may exceed — see the risk table in 1b).
 > - Constraints = technical limits (performance, compatibility, security).
 > - Out of Scope = what this feature does NOT do (prevents gold-plating).
 
@@ -236,7 +250,7 @@ A pure utility that converts byte counts to human-readable strings ("1024 → 1 
 **Rules for writing criteria:**
 - Each criterion must be **independently testable** (one behavior = one criterion)
 - Use concrete values in examples: "formats 1024 bytes as '1 KB'" not "formats bytes nicely"
-- Total: 3-7 acceptance criteria + 1-3 edge cases + 1 error case (same as test count target)
+- Total: 3-7 acceptance criteria + 1-3 edge cases + 1 error case (Medium-tier default and test-count target; High-risk specs may exceed the EC/ERR counts to enumerate every boundary — see the risk table in 1b)
 - Prefix with AC/EC/ERR for traceability
 
 **Spec Quality Check — run before presenting to user:**
@@ -257,6 +271,8 @@ Grep spec text for smell patterns:
 - Compound criteria: "X and Y" in a single AC → split into AC-N and AC-N+1
 
 If smells found → fix them before presenting to the user.
+
+**Spec-readiness signal — stop refining when returns go trivial.** When the DETAIL/smell pass only surfaces cosmetic nitpicks (wording, bullet ordering) rather than genuine ambiguity or missing behavior, the spec content is ready — stop refining and proceed to the remaining pre-lock checks (Page-Level AC Detection, then auto-lock). Chasing further polish past that point is its own form of over-spec. When unsure whether a residual item is cosmetic or missing behavior, treat it as missing behavior — that seam is exactly where under-spec hides.
 
 **Page-Level AC Detection** — find criteria that unit tests cannot truly verify.
 
@@ -301,7 +317,7 @@ If the user interjects with spec changes at any point — incorporate them and r
 - Pass the user's raw feature requirement to the test-writer in place of the locked spec
 - Skip Step 4 (Spec Verification) — note "prompt-only mode" in the Final Report
 
-Use prompt-only when the feature is small enough that writing a structured spec adds more friction than value (e.g., a one-off animation, CSS tweak, or developer utility). Phase Violations rule "NEVER write tests before the spec is locked" is satisfied by the user's explicit prompt-only choice.
+Accept prompt-only when the user requests it and the feature is small enough that a structured spec adds more friction than value (e.g., a one-off animation, CSS tweak, or developer utility — but never one that touches auth, money, data, or migrations; blast radius overrides size). Phase Violations rule "NEVER write tests before the spec is locked" is satisfied by the user's explicit prompt-only choice.
 
 #### 1c. Locked Spec
 
