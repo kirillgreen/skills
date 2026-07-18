@@ -7,13 +7,28 @@ Custom AI Agent Skills for [Claude Code](https://docs.anthropic.com/en/docs/clau
 | Skill | Description |
 |-------|-------------|
 | [attack-surface](attack-surface/) | Strategic research framework that compresses months of market research into hours through 3 power questions |
+| [bugfix-pipeline](bugfix-pipeline/) | Bug fixing with test gates — traces the code path that *actually runs* before editing, so the fix can't land on a dead lookalike |
 | [deep-research](deep-research/) | Multi-source research with inline citations, source quality tiers, contradictions analysis, and adversarial review |
 | [first-principles](first-principles/) | Multi-pass first principles analysis that decomposes problems to fundamental truths through 4 universal lenses |
 | [tdd](tdd/) | Spec-driven Test-Driven Development — strict Red-Green-Refactor with three isolated subagents, three-dimension spec verification, and a spec-defect escape hatch |
+| [wrap-up](wrap-up/) | End-of-session ritual — one scan, one report, one approval; leaves nothing uncommitted, unmerged, or orphaned, and refuses to claim "clean" when a probe failed |
 
 ## What Are Skills?
 
 Skills are specialized knowledge modules for Claude Code — structured prompts that teach the AI agent how to perform complex multi-step workflows. Each skill is a self-contained folder with a `SKILL.md` definition and optional reference files.
+
+`check-rubric-drift.sh` at the repo root is a maintenance helper, not a skill: `deep-research` and `attack-surface` share a source-credibility rubric, and this script fails if the two copies drift apart. Wire it into a pre-commit hook or ignore it — it's not needed to use any skill.
+
+## Which one when
+
+`tdd` and `bugfix-pipeline` are a pair — same discipline, routed by intent:
+
+| Situation | Skill |
+|---|---|
+| New behavior | [`tdd`](tdd/) — the failing test *specifies* it |
+| Something is broken | [`bugfix-pipeline`](bugfix-pipeline/) — the failing test *reproduces* it |
+| Pure refactor, no behavior change | neither |
+| Session is over | [`wrap-up`](wrap-up/) |
 
 ## Installation
 
@@ -21,6 +36,13 @@ Copy any skill folder to your Claude Code skills directory:
 
 ```bash
 cp -r <skill-name>/ ~/.claude/skills/<skill-name>/
+```
+
+`bugfix-pipeline` reuses the `tdd-test-writer` and `tdd-implementer` agents that ship
+with `tdd` — install those too:
+
+```bash
+cp tdd/agents/*.md ~/.claude/agents/
 ```
 
 ## License
