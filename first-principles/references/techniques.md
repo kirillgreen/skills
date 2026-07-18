@@ -26,6 +26,8 @@ A disciplined questioning process that separates knowledge from assumption. Each
 
 **Ground truth discovered:** The bottleneck is decision speed and scope, not engineering capacity.
 
+*(This table shows the full internal process. In the report, show only the steps that shifted the conclusion — per SKILL.md Pass 2 — and compress the rest.)*
+
 ---
 
 ## Five Whys
@@ -43,6 +45,8 @@ Developed by Sakichi Toyoda (Toyota). Drill from symptom to root cause through s
 | 5 | Why did we design for first use? | We assumed acquisition = retention. We optimized for "wow" not for habit |
 
 **Ground truth discovered:** The product solves a one-time need. Churn isn't a bug — it's the correct behavior for the current design. The real question is: what recurring need exists for this user?
+
+*(Same output rule as above: the full chain goes in the report only when it lands somewhere non-obvious; otherwise state the conclusion.)*
 
 ### When to go deeper than 5
 
