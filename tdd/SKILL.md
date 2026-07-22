@@ -327,6 +327,8 @@ The locked spec contains:
 - Numbered criteria (AC-1, AC-2, ... EC-1, ... ERR-1, ...)
 - Total criterion count (for verification tracking)
 
+**Persist the locked spec — chat context does not survive compaction.** Immediately on lock (and again on every re-lock after a spec-defect revision), write the full locked spec text to `<project_root>/.tdd/spec-<feature-slug>.md` (kebab-case the feature name; `mkdir -p` the `.tdd/` directory if missing — same home as `debt.md`). Mid-cycle, after any context loss, re-read `locked_spec` from this file — never reconstruct it from memory: a from-memory reconstruction is exactly the unlocked-spec drift the lock exists to prevent. The file is a cycle artifact, not documentation — Variant A (completed) deletes it in the Final Report step; Variant B (aborted) keeps it and names it in the report so a follow-up cycle can resume from the exact locked text. (Prompt-only mode writes no file — there is no spec.)
+
 ### Phase 1: RED -- Write Failing Tests
 
 Invoke `tdd-test-writer` agent via the Agent tool with `subagent_type: "tdd-test-writer"`.
@@ -732,6 +734,7 @@ Notes on Variant A:
 - WARNINGs and SUGGESTIONs are advisory but listed in full — no truncation. The user can scan and skip.
 - If prompt-only mode was used: the Verification block is replaced with `Verification: skipped (prompt-only mode)`.
 - All findings come from the `findings_ledger` (see Findings Ledger section). Never recount from memory.
+- **Spec-file cleanup:** on emitting Variant A, delete `<project_root>/.tdd/spec-<feature-slug>.md` — the durability copy's job ends with the cycle (a spec worth keeping belongs in project docs, not `.tdd/`). No file exists in prompt-only mode.
 
 **Variant B — Aborted (spec-defect 2-strike, user abort, post-5-attempts choice (c), or intent-check routed to /bugfix):**
 
@@ -753,6 +756,7 @@ State at abort:
   Implementation: [list or "none"]
   Iteration attempts used: [N/5]
   Working tree: [clean | partial changes present, run `git status`]
+  Spec file: [.tdd/spec-<feature-slug>.md — kept for resume | "—" (prompt-only)]
 
 Findings so far (grouped by tier, includes carried-from-strike-1 if any):
   CRITICAL ([N]):

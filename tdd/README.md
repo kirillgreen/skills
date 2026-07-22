@@ -10,6 +10,7 @@ v2 builds on v1's subagent isolation with a heavier verification layer:
 - **Severity-tiered findings** — **CRITICAL / WARNING / SUGGESTION**, tracked in an auditable findings ledger with an acknowledged-override trail (so silenced criticals leave a paper trail instead of vanishing).
 - **Spec-defect escape hatch** — when GREEN reveals the spec is internally contradictory or unimplementable, the pipeline **halts and reports the defect** instead of silently encoding the bug into passing tests.
 - **Prompt-only mode** — run the cycle without a locked spec for features too small to spec.
+- **Spec persistence** (v2.1) — the locked spec is written to `.tdd/spec-<feature>.md` on lock, so a mid-cycle context compaction can't lose it; completed cycles clean the file up, aborted cycles keep it for resume.
 
 **Eval-backed.** In a head-to-head evaluation, v2 caught a planted spec contradiction — a gating rule that conflicted with its own prose contract — that v1 shipped as **19 passing tests over a real access-control bug**, while raising **zero** false defects across clean specs (3–18 acceptance criteria each). Strictly better at catching bad specs, with no regression on good ones.
 
