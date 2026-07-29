@@ -18,6 +18,8 @@ empty result from a *failed* command must never render as "0 / clean." This is
 the load-bearing rule behind the "Safe to exit" promise: the verdict may only
 print a clean line for a category whose probe actually *succeeded and came back
 empty*. Any UNKNOWN forbids the unqualified ✅ (see safety-rules.md #8).
+Exception: a detector may document an rc inversion inline (the §0.5 conflict
+probes — rc=1 means clean there); judge those by OUTPUT, as noted at the site.
 
 ```bash
 out=$(some_probe 2>&1); rc=$?
@@ -38,6 +40,8 @@ dir is re-sent in the env preamble every turn, so its birth time is a stable
 session-start clock.
 
 ```bash
+# NOTE: shell state dies between Bash tool calls — re-derive T0 inside EVERY
+# call that compares against it; a stale/unset $T0 fails open or silently.
 SESSION_DIR=$(dirname "<session-scratchpad-dir>")   # the <uuid> dir, not /scratchpad
 T0=$(stat -f %B "$SESSION_DIR")                      # birth time, epoch seconds (BSD stat)
 NOW=$(date +%s)
@@ -61,12 +65,53 @@ as someone else's, report don't kill.
 ### Repo discovery — deterministic, not from memory
 
 ```bash
-# Any git root under <projects-root> that is dirty OR ahead is a candidate:
-find <projects-root> -name .git -maxdepth 4 -type d -prune 2>/dev/null | while read g; do
-  r=$(dirname "$g")
+# Any git checkout under <projects-root> that is dirty, ahead, OR committed-to
+# since T0 is a candidate. What this two-pass discovery is shaped around:
+#   - a worktree's .git is a FILE, not a dir, and worktrees can nest at any
+#     depth under a repo — no depth-bounded find alone is complete. Pass 2
+#     asks git itself for every registered worktree of every root found:
+#     authoritative, depth-proof;
+#   - node_modules must be pruned: at depth ≤4 that's thousands of package
+#     dirs per project;
+#   - `dirty OR ahead` alone misses a repo whose work is already committed
+#     AND pushed — clean, not ahead, but tracker/docs steps still apply. The
+#     HEAD-commit-after-T0 test catches those. A HEAD>T0 hit in a repo you
+#     don't recall touching may be a PEER session's commit (parallel agent
+#     sessions exist — safety-rules #7): a SOFT candidate — confirm with the
+#     user, never auto-act on it.
+
+# T0 must be derived IN THIS SHELL — env vars do not survive between Bash tool
+# calls, and zsh treats [ n -gt "" ] as TRUE (every repo would match); an
+# unresolved T0 must degrade loudly to UNKNOWN, never silently:
+T0=$(stat -f %B "$(dirname "<session-scratchpad-dir>")" 2>/dev/null)
+case "$T0" in ''|*[!0-9]*) echo "UNKNOWN: T0 unresolved — HEAD>T0 test disabled"; T0= ;; esac
+
+# Pass 1 — checkout roots (depth-bounded find; trailing -prune skips
+# descending into the ~1.5k dirs inside each .git):
+ROOTS=$(find <projects-root> -maxdepth 4 -name node_modules -prune   -o -name .git \( -type d -o -type f \) -print -prune 2>/dev/null | sed 's|/\.git$||')
+
+# Pass 2 — every registered worktree of every root (awk sub(), not $2: paths
+# may contain spaces). Dedup by INODE, not by name: on a case-insensitive
+# filesystem git's admin files can record a different CASE than the on-disk
+# name, and a byte-wise sort -u then keeps both spellings — one worktree
+# becomes two destructive DECISIONS entries. (`cd`+`pwd -P` does NOT fix case
+# in bash, only zsh — the inode is shell-proof; Linux: stat -c '%d:%i'.)
+# The stat also drops stale/prunable worktree records whose path is gone.
+# Guard empty ROOTS: `git -C ""` silently operates on cwd.
+[ -z "$ROOTS" ] && echo "UNKNOWN: no git checkouts found — discovery failed"
+{ [ -n "$ROOTS" ] && printf '%s\n' "$ROOTS"
+  [ -n "$ROOTS" ] && printf '%s\n' "$ROOTS" | while read -r r; do
+    git -C "$r" worktree list --porcelain 2>/dev/null \
+      | awk '/^worktree /{sub(/^worktree /,""); print}'
+  done
+} | grep -v '^$' | while read -r r; do
+  key=$(stat -f '%d:%i' "$r" 2>/dev/null) && printf '%s\t%s\n' "$key" "$r"
+done | awk -F'\t' '!seen[$1]++{print $2}' | while read -r r; do
   dirty=$(git -C "$r" status --porcelain 2>/dev/null)
   ahead=$(git -C "$r" rev-list --count @{u}..HEAD 2>/dev/null)
-  [ -n "$dirty" ] || [ "${ahead:-0}" -gt 0 ] 2>/dev/null && echo "$r"
+  last=$(git -C "$r" log -1 --format=%ct 2>/dev/null)
+  [ -n "$dirty" ] || [ "${ahead:-0}" -gt 0 ] \
+    || { [ -n "$T0" ] && [ "${last:-0}" -gt "$T0" ]; } && echo "$r"
 done
 ```
 
@@ -105,7 +150,16 @@ Phase-3 review, and a flaky/env failure would false-halt the gate.
 
 # Mid-operation git states
 git -C <repo> status | grep -iE "rebase in progress|unmerged|you have unmerged"
-grep -rn "^<<<<<<< " <repo> --include="*.*" 2>/dev/null | head   # conflict markers
+# Conflict markers — via git, which respects .gitignore (a raw `grep -r` walks
+# node_modules: seconds of wall-clock for pure noise). NOTE: these invert the
+# §top three-state template — judge by OUTPUT, not rc (git grep rc=1 = clean
+# no-match; diff --check rc=2 = FOUND problems). And filter --check to
+# conflict lines only — it also flags trailing whitespace, which would
+# false-halt the gate on every unformatted repo:
+git -C <repo> diff HEAD --check 2>/dev/null | grep -i 'conflict marker' | head
+git -C <repo> grep -n "^<<<<<<< " 2>/dev/null | head   # tracked files
+git -C <repo> ls-files --others --exclude-standard -z 2>/dev/null \
+  | xargs -0 grep -l '^<<<<<<< ' 2>/dev/null | head    # untracked new files
 
 # Fresh WIP — ADDED lines only (not old TODOs already in the file)
 git -C <repo> -c core.quotepath=false diff HEAD 2>/dev/null \
@@ -238,7 +292,7 @@ can rebind under a new PID.
 
 ```bash
 xcrun simctl list devices booted               # may XPC-error under sandbox → UNKNOWN, not CLEAN
-du -sh ~/Library/Developer/XCTestDevices 2>/dev/null   # --deep: leaked clones (can reach hundreds of GB)
+# (leaked XCTestDevices clones are --deep tier — their du lives in §10)
 ```
 
 **Before proposing to touch ANY sim**, check whether its UDID is pinned as
@@ -329,12 +383,29 @@ The outcome feeds the mandatory `docs:` token in the close-out verdict
 
 ## 8. Code review (only if code changed)
 
-Delegate to `code-reviewer` in Phase 3 over each touched repo's session diff. In
-a multi-repo session, gate **each repo independently** (run that repo's fast
-check before committing it) — a per-turn hook typically only verifies the cwd
-repo, so other repos would otherwise get committed unverified. Single vs. multi
-reviewer by stakes (routine → one; auth/payments/migrations/releases/
-cross-project/large → 2–3 decorrelated, dedup+rank into one list, keep
+**Skip check first — reuse the pass, but carry its VERDICT, never assume it
+was clean.** Per repo: if a `code-reviewer` pass already ran this session on
+this repo's current diff (no code changes since), don't re-run it — record
+what that pass actually concluded:
+  - it approved → `review: passed in-session`;
+  - it left findings open → `review: <N> open (in-session) — NOT clean`,
+    which forbids the unqualified ✅ (verdict (b), safety-rules #8). Note the
+    asymmetry: *fixing* the findings changes the code, which voids the skip
+    and re-runs the review — so "no code changed since" alone proves nothing
+    about cleanliness, only about staleness.
+The skip only discharges the tier the diff requires: a high-stakes diff
+(auth/payments/migrations/releases/cross-project/large) needs 2–3 decorrelated
+reviewers — one in-session pass doesn't satisfy that; run the missing ones over
+the current diff. That certainty lives only in your conversation context; after
+a compaction you may not have it — when unsure, run the review (a duplicate
+pass costs tokens; a skipped-but-needed one ships a bug).
+
+Otherwise delegate to `code-reviewer` in Phase 3 over each touched repo's
+session diff. In a multi-repo session, gate **each repo independently** (run
+that repo's fast check before committing it) — a per-turn hook typically only
+verifies the cwd repo, so other repos would otherwise get committed unverified.
+Single vs. multi reviewer by stakes (routine → one; auth/payments/migrations/
+releases/cross-project/large → 2–3 decorrelated, dedup+rank into one list, keep
 single-source HIGH/MED).
 
 ## 9. Memory
@@ -346,9 +417,15 @@ second run, grep that file for the line so a double-run doesn't duplicate it.
 ## 10. Disk
 
 ```bash
-du -sh "<session-scratchpad-dir>" ~/Library/Developer/XCTestDevices \
-       ~/Library/Developer/Xcode/DerivedData 2>/dev/null
+# session scope:
+du -sh "<session-scratchpad-dir>" 2>/dev/null
 df -h / | tail -1
+```
+
+```bash
+# --deep only — XCTestDevices/DerivedData can be tens of GB; walking them costs
+# tens of seconds per run for a report-only number:
+du -sh ~/Library/Developer/XCTestDevices ~/Library/Developer/Xcode/DerivedData 2>/dev/null
 ```
 
 Report only. Deletion beyond this session's own scratchpad is `--deep`-tier and

@@ -73,6 +73,19 @@ lesson · disk residue.
   live `git push` and any running `tsc`. Kill by attributed PID only.
 - Verify the **port** is free, not that the PID is gone — `concurrently` rebinds under
   a new PID.
+- A worktree's `.git` is a **file**, not a directory — and worktrees nest at
+  arbitrary depths. A depth-bounded `find -type d` misses them entirely; ask
+  `git worktree list` from every discovered root instead.
+- On a case-insensitive filesystem, git can record a worktree under a different
+  **casing** than the on-disk directory — one worktree becomes two "delete?"
+  entries unless you dedup by **inode** (`stat '%d:%i'`). `cd` + `pwd -P` does
+  NOT fix case in bash (it does in zsh) — don't trust it.
+- Shell variables **die between tool calls**. A `$T0` set in one call is empty
+  in the next — and zsh treats `[ n -gt "" ]` as *true*, so a lost variable can
+  turn a scoped filter into match-everything. Re-derive state inside every call.
+- Stop hooks may read only the **first few hundred chars** of a tool result — a
+  verification token at the end of a long combined command's output is
+  invisible. Emit it as its own call.
 
 ## Adapting it
 

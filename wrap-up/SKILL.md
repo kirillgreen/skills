@@ -190,12 +190,20 @@ shell probes. Collect findings — do not act yet.
 7. **Docs** — *only if code changed*: did the project's docs (README / architecture
    / setup / API) drift relative to the change?
 8. **Code review** — *only if code changed*: the session diff deserves a
-   `code-reviewer` pass before you call it done. High-stakes diffs (auth /
-   payments / migrations / cross-project) warrant a multi-reviewer fan-out.
+   `code-reviewer` pass before you call it done — but not a second one. Per
+   repo: a pass that already ran this session on the current diff (no code
+   changes since) is reused **with its verdict, never assumed clean**:
+   approved → `review: passed in-session`; findings still open → `review: <N>
+   open (in-session) — NOT clean` (forbids the unqualified ✅). Only in-context
+   certainty qualifies; post-compaction, when unsure, run it. High-stakes diffs
+   (auth / payments / migrations / cross-project) warrant a multi-reviewer
+   fan-out — one in-session pass doesn't discharge that tier. Details:
+   scan-commands.md §8.
 9. **Memory** — any durable, non-obvious learning from this session worth writing
    to your notes/memory file? Surface as a *suggestion*, never auto-write.
-10. **Disk** — a quick `du` on the obvious heavy temp targets so residue is
-    visible. Report only; deletions are individually gated.
+10. **Disk** — `du` on this session's scratchpad + `df`; the heavy trees
+    (XCTestDevices, DerivedData) are `--deep`-tier — walking them costs tens
+    of seconds. Report only; deletions are individually gated.
 
 ### Phase 2 — REPORT (one screen, then one approval)
 
@@ -225,7 +233,7 @@ THEN (code changed): code-reviewer on 14 files · docs pass for the api README
   ↳ review can HALT the rest if it finds a real bug
 
 ℹ️  Left alone: pinned sim project-canonical-iPhone16 (canonical)
-    --deep would also sweep: 94 old scratchpad dirs · XCTestDevices <size>
+    --deep would also sweep: old scratchpad dirs · XCTestDevices (sizes not measured in session scope)
 🧠  Lesson worth saving: <one line> — say so and I'll write it
 ```
 
@@ -240,9 +248,8 @@ Or strike items: "skip 2", "not the worktree", "1 and 3 only".
 
 Note the approval word is **"go"**, deliberately different from the gate's "wrap
 anyway", so muscle-memory can't blow through both. Honor `--dry-run` (stop here)
-and `--yes` (still print this report, then run the WILL-RUN tier; the DECISIONS
-list still needs a "go"/strike — `--yes` never auto-runs a destructive or
-external action). Anything genuinely irreversible-with-data-loss (force-removing
+and `--yes` (per Flags: WILL-RUN tier auto-runs, DECISIONS still need a
+"go"/strike). Anything genuinely irreversible-with-data-loss (force-removing
 a *dirty* worktree) the rules forbid auto-proposing anyway, so the single "go"
 should be the only prompt in practice.
 
@@ -255,8 +262,10 @@ classic trap).
 
 1. **Heavy steps first, and they can halt the rest.** If code changed, run
    `code-reviewer` (and any docs pass) — **per touched repo**, gating each one
-   independently. A real blocker → **stop and surface it**; do not commit/clean
-   over a known bug. Green + docs *before* merge. Docs drift you can't fix right
+   independently and honoring the `scan-commands.md` §8 skip-and-carry (a repo
+   whose current diff was already reviewed this session doesn't pay twice — its
+   verdict carries into the close-out). A real blocker → **stop and surface
+   it**; do not commit/clean over a known bug. Green + docs *before* merge. Docs drift you can't fix right
    now (file mid-edit by a concurrent session, fix belongs to an unmerged branch)
    must leave a **durable artifact before the verdict**: a tracker issue or an
    unticked item in the session's plan file — and the `docs:` verdict token names
@@ -287,7 +296,9 @@ classic trap).
    probe, so it's the easiest to drop silently; the mandatory token makes
    "checked, clean" distinguishable from "never looked". `drift → …` is only
    valid if the durable artifact from step 1 actually exists — verify it like
-   any other verdict line.
+   any other verdict line. When code changed, a `review:` token rides along
+   the same way — `passed` / `passed in-session` / `<N> open (in-session) —
+   NOT clean` — so a skipped re-run is never mistaken for a clean one.
 
    **Print one of three verdicts — never dress a kept loose end or a failed probe
    as a clean exit (safety-rules #8). The condition goes in the H2, the one line a
@@ -297,7 +308,7 @@ classic trap).
 ```
 ## ✅ Safe to exit — nothing left behind
 Reviewed, committed, pushed, cleaned. Residue: none.
-   feat/x pushed · 0 servers · 0 worktrees · 0 sims · scratchpad clear · ENG-280 Done · review passed · docs: no drift
+   feat/x pushed · 0 servers · 0 worktrees · 0 sims · scratchpad clear · ENG-280 Done · review: passed · docs: no drift
 →  exit
 ```
    **(b) Clean except things you chose to keep** — count in the title, unmissable:
@@ -306,7 +317,7 @@ Reviewed, committed, pushed, cleaned. Residue: none.
 Everything else is resolved. These remain by your call — eye them before exit:
    ⚠ feat/payments worktree: 3 uncommitted files — kept dirty
    ⚠ code review: 1 HIGH open (auth token logged) — not addressed
-Resolved: feat/x pushed · servers stopped · scratchpad clear · ENG-280 Done · docs: updated inline
+Resolved: feat/x pushed · servers stopped · scratchpad clear · ENG-280 Done · review: 1 open (in-session) — NOT clean · docs: updated inline
 ```
    **(c) Couldn't verify** — a probe errored, so this is NOT a full all-clear:
 ```
@@ -316,11 +327,14 @@ Resolved: git clean · servers stopped · scratchpad clear · docs: no drift
 →  not a full all-clear: verify sims yourself before exit.
 ```
 
-> **If your harness has a Stop hook** that requires a verification token in recent
-> tool output, the close-out's `git`/`du`/`ps` probes may not match its pattern and
-> the verdict itself can get blocked. End the re-scan with a literal
-> `echo "VERIFIED: wrap-up close-out re-scan"` (or whatever token your hook expects).
-> No Stop hook → ignore this.
+> **If your harness has a Stop hook** that requires a verification token in tool
+> output, the close-out's `git`/`du`/`ps`/`lsof` probes may not match its pattern
+> and the verdict itself can get blocked. Emit the token (e.g.
+> `echo "VERIFIED: wrap-up close-out re-scan"`) as its **own separate Bash
+> call**, never the tail of a longer probe — hooks often read only the first few
+> hundred chars of each tool result, so a token at the end of a long combined
+> re-scan is invisible. Keep the reason substantive and free of characters the
+> hook's regex may stop at (e.g. `|` `"` `\`). No Stop hook → ignore this.
 
 ## Non-negotiables (full list in references/safety-rules.md)
 
