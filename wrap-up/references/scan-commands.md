@@ -87,15 +87,17 @@ T0=$(stat -f %B "$(dirname "<session-scratchpad-dir>")" 2>/dev/null)
 case "$T0" in ''|*[!0-9]*) echo "UNKNOWN: T0 unresolved — HEAD>T0 test disabled"; T0= ;; esac
 
 # Pass 1 — checkout roots (depth-bounded find; trailing -prune skips
-# descending into the ~1.5k dirs inside each .git):
-ROOTS=$(find <projects-root> -maxdepth 4 -name node_modules -prune   -o -name .git \( -type d -o -type f \) -print -prune 2>/dev/null | sed 's|/\.git$||')
+# descending into the hundreds-to-thousands of dirs inside each .git):
+ROOTS=$(find <projects-root> -maxdepth 4 -name node_modules -prune \
+  -o -name .git \( -type d -o -type f \) -print -prune 2>/dev/null | sed 's|/\.git$||')
 
 # Pass 2 — every registered worktree of every root (awk sub(), not $2: paths
 # may contain spaces). Dedup by INODE, not by name: on a case-insensitive
 # filesystem git's admin files can record a different CASE than the on-disk
 # name, and a byte-wise sort -u then keeps both spellings — one worktree
 # becomes two destructive DECISIONS entries. (`cd`+`pwd -P` does NOT fix case
-# in bash, only zsh — the inode is shell-proof; Linux: stat -c '%d:%i'.)
+# in bash, only zsh — the inode is shell-proof; -L follows symlinks so a
+# linked path can't double-count; Linux: stat -Lc '%d:%i'.)
 # The stat also drops stale/prunable worktree records whose path is gone.
 # Guard empty ROOTS: `git -C ""` silently operates on cwd.
 [ -z "$ROOTS" ] && echo "UNKNOWN: no git checkouts found — discovery failed"
@@ -105,8 +107,8 @@ ROOTS=$(find <projects-root> -maxdepth 4 -name node_modules -prune   -o -name .g
       | awk '/^worktree /{sub(/^worktree /,""); print}'
   done
 } | grep -v '^$' | while read -r r; do
-  key=$(stat -f '%d:%i' "$r" 2>/dev/null) && printf '%s\t%s\n' "$key" "$r"
-done | awk -F'\t' '!seen[$1]++{print $2}' | while read -r r; do
+  key=$(stat -Lf '%d:%i' "$r" 2>/dev/null) && printf '%s\t%s\n' "$key" "$r"
+done | awk -F'\t' '!seen[$1]++{print substr($0, index($0,"\t")+1)}' | while read -r r; do
   dirty=$(git -C "$r" status --porcelain 2>/dev/null)
   ahead=$(git -C "$r" rev-list --count @{u}..HEAD 2>/dev/null)
   last=$(git -C "$r" log -1 --format=%ct 2>/dev/null)
@@ -423,8 +425,8 @@ df -h / | tail -1
 ```
 
 ```bash
-# --deep only — XCTestDevices/DerivedData can be tens of GB; walking them costs
-# tens of seconds per run for a report-only number:
+# --deep only — XCTestDevices/DerivedData can reach hundreds of GB; walking
+# them costs tens of seconds per run for a report-only number:
 du -sh ~/Library/Developer/XCTestDevices ~/Library/Developer/Xcode/DerivedData 2>/dev/null
 ```
 

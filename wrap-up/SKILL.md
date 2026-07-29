@@ -47,7 +47,10 @@ Written against a macOS + git + Node/Swift workflow with an issue tracker. The
   wrappers. Skip any category your setup doesn't have — a missing category is not
   a finding.
 - **Placeholders** to replace throughout: `<projects-root>` (the directory your repos
-  live under) and `<scratchpad-parent>` (where your harness keeps per-session temp dirs).
+  live under) and `<scratchpad-parent>` (where your harness keeps per-session temp
+  dirs). Filled per-run rather than at setup: `<session-scratchpad-dir>` (this
+  session's temp dir — the agent knows it from its env preamble), `<repo>`, `<wt>`,
+  `<PID>`, `<UDID>`.
 - **Issue tracker** is referenced generically. Wire it to whatever you use
   (Linear/Jira/GitHub Issues) via CLI or MCP; if you have none, skip that category.
 - **Code review** is delegated to a `code-reviewer` agent. This repo doesn't ship one —
@@ -84,9 +87,12 @@ one. So anchor on facts, not recall (commands in `scan-commands.md` §0):
   compaction). Anything — server, worktree, sim, scratchpad file — born *after*
   T0 is this session's; born before is `--deep`-only. This is how you attribute
   residue deterministically instead of guessing.
-- **Repos touched — discover, don't just recall.** Any git root under
-  `<projects-root>` that is dirty or ahead is a candidate; corroborate with memory,
-  then confirm the set with the user. A session can span multiple repos.
+- **Repos touched — discover, don't just recall.** Two passes (§0): every git
+  checkout under `<projects-root>` that is dirty, ahead, **or committed-to since
+  T0**, plus every worktree `git worktree list` reports from each root found (a
+  worktree's `.git` is a file, so a depth-bounded find alone misses them).
+  Corroborate with memory, then confirm the set with the user. A session can
+  span multiple repos.
 - **Code actually changed?** — the gate for the two heavy steps. Use the
   Unicode-safe diff check in §0 (a plain `grep '\.md$'` misfires on non-ASCII or
   spaced paths). Docs/config-only → heavy steps skip.
@@ -265,8 +271,9 @@ classic trap).
    independently and honoring the `scan-commands.md` §8 skip-and-carry (a repo
    whose current diff was already reviewed this session doesn't pay twice — its
    verdict carries into the close-out). A real blocker → **stop and surface
-   it**; do not commit/clean over a known bug. Green + docs *before* merge. Docs drift you can't fix right
-   now (file mid-edit by a concurrent session, fix belongs to an unmerged branch)
+   it**; do not commit/clean over a known bug. Green + docs *before* merge. Docs
+   drift you can't fix right now (file mid-edit by a concurrent session, fix
+   belongs to an unmerged branch)
    must leave a **durable artifact before the verdict**: a tracker issue or an
    unticked item in the session's plan file — and the `docs:` verdict token names
    it. A chat-only "fold into next merge" evaporates — treat it as not handled.

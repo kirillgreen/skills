@@ -92,7 +92,8 @@ lesson · disk residue.
 Written against macOS + git + Node/Swift with an issue tracker. The structure ports;
 some detectors don't. `stat -f %B` → `stat -c %W` on Linux, drop the simulator category
 off Apple platforms, skip the tracker if you don't use one, and replace
-`<projects-root>` with wherever your repos live. A missing category is not a finding.
+`<projects-root>` with wherever your repos live (per-run placeholders like
+`<session-scratchpad-dir>` are listed in SKILL.md's Adapting section). A missing category is not a finding.
 
 ## Installation
 
