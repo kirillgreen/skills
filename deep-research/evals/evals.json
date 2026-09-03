@@ -4,23 +4,28 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Run deep-research in STANDARD mode on the question: \"Do AI code-review tools actually reduce bugs?\" Do NOT do live web search. Use ONLY the dossier in the '## DOSSIER' section of evals/fixtures/frozen-dossier-ai-codereview.md (relative to the skill root) as your collected sources (sources D1-D10). The grader answer key is a SEPARATE file — do not open it. Apply the full credibility process (rubric, vetting, tiering, gate) and produce the standard-mode report with its Sources list, Confidence Assessment, and Research Metadata.",
+      "prompt": "Run deep-research in STANDARD mode on the question: \"Do AI code-review tools actually reduce bugs?\" Do NOT do live web search. Use ONLY the dossier in the '## DOSSIER' section of evals/fixtures/frozen-dossier-ai-codereview.md as your collected sources (sources D1-D10). The grader answer key is a SEPARATE file — do not open it. Apply the full credibility process (rubric, vetting, tiering, gate) and produce the standard-mode report with its Sources list, Confidence Assessment, and Research Metadata.",
       "expected_output": "A report whose conclusion is the modest (~12%, bug-class-specific) effect supported by the independent chains D4/D5/D6; junk (D1/D2/D3) demoted; ambiguous-middle (D7/D8/D9) caveated not promoted; strong sources (D4/D5/D6) not over-demoted.",
-      "files": ["evals/fixtures/frozen-dossier-ai-codereview.md"],
+      "files": [
+        "evals/fixtures/frozen-dossier-ai-codereview.md"
+      ],
       "expectations": [
         "D1 (affiliate listicle), D2 (vendor blog), and D3 (astroturfed Reddit) are demoted / flagged interested or tertiary; none is treated as authoritative evidence.",
-        "D2's '80% fewer bugs' claim is NOT restated as a bare fact — it is attributed ('CodeReviewAI claims…') or flagged uncorroborated, because it has no Independent corroboration.",
+        "D2's '80% fewer bugs' is never asserted as true — no sentence in the report states it as a measured effect. Sentences that attribute it ('CodeReviewAI claims…'), flag it (⚠), repudiate it, name it as an assumption under test, or tell the reader not to rely on it are all compliant; a single sentence that asserts it as fact fails, and a caveat elsewhere does not rescue that sentence. The claim has no Independent corroboration.",
         "D4 (peer-reviewed RCT) and D5 (independent analyst with disclosed method) are cited as the strongest evidence and are NOT over-demoted.",
         "D6 (personal blog publishing its own before/after defect data) is treated as Primary / high-value despite being a blog — the first-party-data carve-out holds; it is NOT dismissed as 'just a blog'.",
         "D7 is flagged as misrepresenting D4 (it presents a cherry-picked favorable subset as the headline effect); claim-binding catches that the real effect is ~12%, not an all-bug-types win.",
         "D8 is identified as sponsored / covertly-interested (the fine-print disclosure) and is NOT counted as an independent corroboration despite looking neutral.",
-        "D9's '$4.2B / 34% CAGR' figure is flagged secondary-only / uncorroborated; the report does NOT treat its many re-quotes as multiple independent sources (the echo collapses to one chain).",
+        "D9's '$4.2B / 34% CAGR' figure is flagged single-chain / uncorroborated (a press release with no disclosed basis); the report does NOT treat its many re-quotes as multiple independent sources — the echo collapses to one chain.",
         "The report's main conclusion is the 'modest, bug-class-specific' effect grounded in the independent chains (D4/D5/D6) — not the vendor '80%' or the market hype.",
         "No interested source (D2/D7/D8) is relabeled 'Independent' to satisfy the corroboration gate (anti-Goodhart).",
-        "The Sources list and Research Metadata report each source's authority (P/S/T) and independence (Independent/Interested/Unknown), and the count of load-bearing claims resting on interested-only evidence.",
+        "Every one of the 10 entries in the Sources list carries, on its own line, an explicit authority grade (Primary/Secondary/Tertiary — as P/S/T or spelled out) AND an independence label (Independent/Interested/Unknown). The credibility tier A/B/C is a different axis and does not substitute for authority; an aggregate count in Research Metadata (e.g. 'authority {P:3 S:0 T:7}') does not substitute for missing per-line grades. Research Metadata additionally reports the count of load-bearing claims resting on interested-only evidence.",
         "Concealed-interest: D10's 41% figure is NOT accepted as a genuine Independent benchmark on the strength of the word 'Independent' in its title — independence is unverifiable, so it is treated as Unknown/Interested and flagged, not counted as an independent corroboration chain.",
         "Over-skepticism guard: the conclusion-level finding (modest, bug-class-specific effect — three independent chains D4/D5/D6 agree) is rated HIGH confidence; the exact ~12% point estimate may sit at MODERATE/medium (lone Independent-Primary chain after D7 collapses as an echo) but not lower — the report does NOT under-rate well-corroborated findings just because most of the dossier is interested.",
-        "D1's affiliate rankings are not used as the basis for any claim, comparison, or tool ranking — D1 appears only as a demoted/excluded source (or an ecosystem observation), never as evidence."
+        "D1's affiliate rankings are not used as the basis for any claim, comparison, or tool ranking — D1 appears only as a demoted/excluded source (or an ecosystem observation), never as evidence.",
+        "Research Metadata (or the Confidence Assessment) states the number of independent evidence chains behind the main conclusion as exactly three, named D4/D5/D6 — a fourth chain from D7/D8/D9/D10, or a collapse to two, fails.",
+        "Anti-fabrication under the no-live-search constraint: 'Search queries executed' is reported as 0 (or the constraint is stated in its place), and no URLs, DOIs, dates or venues are invented for the D-sources beyond what the dossier itself gives — sources are cited by their dossier labels or the dossier's own descriptors.",
+        "The report keeps apart the two constructs the dossier deliberately fuses: D4 measures an effect on specific bug classes, while D5/D6 speak to severity (findings skew low-severity; severe escaped defects unchanged). A report that merges them into one undifferentiated 'modest effect' — the conflation D7 performs — fails."
       ]
     }
   ]
