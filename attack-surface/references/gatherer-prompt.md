@@ -1,6 +1,6 @@
 # Source Gatherer — Subagent Prompt Templates
 
-Use these templates when launching Phase 2 subagents. Each subagent gets a specific focus area and the research brief. All subagents should use Exa MCP tools.
+Use these templates when launching Phase 2 subagents. Each subagent gets a specific focus area and the research brief. All subagents use two Exa MCP tools: `mcp__exa__web_search_exa` (search) and `mcp__exa__web_fetch_exa` (full page, batch several URLs per call).
 
 ---
 
@@ -20,7 +20,7 @@ Using Exa MCP tools:
    - "best {market} solutions {year}"
    - "alternatives to {known_competitor}" (if any known)
    - "{market} startup" (category: company)
-2. For each competitor found, use `mcp__exa__crawling_exa` to crawl their landing page, pricing page, and about page.
+2. For each competitor found, use `mcp__exa__web_fetch_exa` to read their landing page, pricing page, and about page.
 
 For each competitor, extract and return:
 - Company name and URL
@@ -54,7 +54,7 @@ Using Exa MCP tools:
    - "{competitor} review" or "{competitor} problems"
    - "site:producthunt.com {market}"
    - "{market} customer reviews G2 Trustpilot"
-2. Crawl the most relevant results with `mcp__exa__crawling_exa`.
+2. Read the most relevant results in full with `mcp__exa__web_fetch_exa`.
 
 Extract and categorize:
 - **Recurring pain points** (what comes up again and again)
@@ -79,15 +79,16 @@ Research brief:
 Your job: Find broad industry context — market size, trends, expert analysis.
 
 Using Exa MCP tools:
-1. Use `mcp__exa__deep_researcher_start` with model `exa-research-pro`:
+1. Use `mcp__exa__web_search_exa` — run all of these, each rewritten in the brief's own vocabulary (the list is the shape, not the literal query; `numResults: 6-8` per query); different phrasings surface different source ecosystems:
    - "{market} market size growth trends {year}"
-   Check results with `mcp__exa__deep_researcher_check`.
-2. Use `mcp__exa__web_search_exa` for:
+   - "{market} market size forecast report {year}" (analyst firms — note which results are paywalled summaries)
    - "{market} industry report"
    - "{market} market analysis {year}"
-   - "{major_company} earnings call {market}" (if applicable)
-   - "{market} regulatory changes"
+   - "{major_company} earnings call {market}" (once per publicly listed company in the brief; skip private ones)
+   - "{market} regulatory changes" (if this returns only vendor pages and repos, report a gap — that is not evidence that no regulation applies)
    - "{market} technology disruption"
+2. Read the 4-6 strongest results in full with `mcp__exa__web_fetch_exa` (`maxCharacters: 8000`; raise it to 20000 for a long transcript or a full report rather than citing a paragraph you never reached) — market-size figures and their methodology sit in the body, never in the snippet. Prefer the original publisher of a number over the blog that re-quotes it: when a re-quoter cites several primaries, fetch the one that carries the load-bearing number and mark the rest as re-quoted. When two reports disagree, keep both figures, say who measured what, and name the category boundary each one measures — a narrow product category and a broad tooling category can differ 30x. Confirm any funding figure in a second source; a single headline can carry a typo of three orders of magnitude.
+3. Do not look for a hosted research agent (`deep_researcher_*`, `agent_run`): it is not enabled, and this loop — search, read, search again — is what it would do at many times the cost.
 
 Extract:
 - **Market size and growth** (TAM/SAM/SOM if available)
@@ -96,8 +97,9 @@ Extract:
 - **Technology shifts** (what new tech is enabling or disrupting)
 - **Expert predictions** (what industry analysts say is coming)
 - **Funding patterns** (who's investing, how much, in what)
+- **Provenance per number** — the URL that first published it, who measured it, on what date and by what method (a re-quoting blog is Interested-Secondary, per `references/source-credibility.md`)
 
-Cite specific numbers and sources. Vague claims like "the market is growing" without data are useless.
+Cite specific numbers and sources. Vague claims like "the market is growing" without data are useless. A report that carries boilerplate from an unrelated industry is templated report-farm content — tag it Tertiary and do not let its numbers carry weight.
 ```
 
 ---
@@ -120,7 +122,7 @@ Using Exa MCP tools:
    - "{adjacent_market} expanding into {market}"
    - "AI {market}" or "{market} automation" (tech disruption angle)
    - "Y Combinator {market}" or "TechCrunch {market} {year}"
-2. Crawl the most promising results.
+2. Read the most promising results in full with `mcp__exa__web_fetch_exa` (`maxCharacters: 5000`).
 
 Extract:
 - **New entrants** (startups launched in last 2 years)
@@ -146,7 +148,7 @@ Research brief:
 Sources to crawl:
 {LIST_OF_URLS_OR_FILES}
 
-Your job: Extract full content from each source using `mcp__exa__crawling_exa` (for URLs) or Read tool (for local files). Use `maxCharacters: 10000` to get comprehensive content.
+Your job: Extract full content from each source using `mcp__exa__web_fetch_exa` (for URLs) or Read tool (for local files). Use `maxCharacters: 10000` to get comprehensive content.
 
 For each source, return:
 - Source URL/path

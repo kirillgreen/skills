@@ -75,7 +75,7 @@ This is the intelligence-gathering phase. Launch parallel subagents to collect d
 
 ### What to gather
 
-Launch 4-6 parallel `general-purpose` subagents, each focused on a different source type. All subagents should use Exa MCP tools (`mcp__exa__web_search_exa`, `mcp__exa__crawling_exa`, `mcp__exa__deep_researcher_start`).
+Launch 4-6 parallel `general-purpose` subagents, each focused on a different source type. All subagents use the two Exa MCP tools: `mcp__exa__web_search_exa` (search) and `mcp__exa__web_fetch_exa` (full page). There is no hosted research-agent tool in this pipeline: the gatherers are the multi-hop loop (search → read the full page → search again), and the agent that used to sit in the Industry Analysis step duplicated that loop as a black box and, as the only caller of that tool, accounted for most of the account's lifetime Exa spend.
 
 **Subagent 1: Competitor Intelligence**
 Search for and crawl 5-8 competitor landing pages, product pages, and pricing pages. Extract: value propositions, positioning, pricing models, feature lists, target audience language.
@@ -84,13 +84,13 @@ Search for and crawl 5-8 competitor landing pages, product pages, and pricing pa
 Search Reddit, forums, review sites (G2, Trustpilot, Product Hunt, App Store reviews) for customer complaints, praise, and unmet needs in this market. Extract: recurring pain points, feature requests, emotional language, switching triggers.
 
 **Subagent 3: Industry Analysis**
-Search for industry reports, expert analysis, trend pieces, and earnings call transcripts. Use `deep_researcher_start` with `exa-research-pro` for comprehensive coverage. Extract: market size, growth trends, key players, regulatory landscape, technology shifts.
+Search for industry reports, expert analysis, trend pieces, and earnings call transcripts — several differently-phrased queries, then read the full report pages rather than the snippets (market-size numbers live in the body, next to the methodology that qualifies them). Extract: market size, growth trends, key players, regulatory landscape, technology shifts.
 
 **Subagent 4: Adjacent & Emerging**
 Search for startups entering this space, adjacent markets that could expand into it, and emerging technologies that could disrupt it. Extract: new entrants, pivot signals, technology trends, funding patterns.
 
 **Subagent 5: User-Provided Sources** (if any)
-Crawl all URLs the user provided using `mcp__exa__crawling_exa`. Extract full content.
+Fetch all URLs the user provided using `mcp__exa__web_fetch_exa`. Extract full content.
 
 ### Subagent prompt template
 
@@ -317,7 +317,7 @@ When launching subagents:
 ### Token Budget
 
 This skill launches 7-11 subagent calls total. Estimated cost:
-- Phase 2: 4-6 subagents x ~5-15K tokens each
+- Phase 2: 4-6 subagents x ~5-15K tokens each (Industry Analysis ~20-30K — 8 searches + 4-6 full reads)
 - Phase 2.5: 1 vetting subagent x ~10-20K tokens
 - Phases 3-6: 4 subagents x ~10-20K tokens each
 - Total: ~70-170K tokens per full research session (the vetting pass is the price of not betting strategy on junk sources)
@@ -330,6 +330,7 @@ This skill launches 7-11 subagent calls total. Estimated cost:
 |---------|-----|
 | Skipping Phase 1 briefing | The research brief focuses everything — never skip |
 | Generic Exa searches | Use specific, targeted queries from the research brief |
+| Reaching for a hosted research agent (`deep_researcher_*`, `agent_run`) | Not enabled and not needed — the gatherers already do the multi-hop; that agent was the skill's dominant cost line |
 | Presenting analysis without evidence | Every insight must cite specific sources |
 | Moving past weak stress-test answers | Always run iterative deepening on weak answers |
 | Forgetting to save | Always save the final document at the end |

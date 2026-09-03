@@ -59,12 +59,12 @@ Break the question into 3-5 sub-questions that, when answered together, fully ad
 2. Evaluate what's available — which sub-topics have rich sources? Which are sparse?
 3. Follow up with **narrower, targeted queries** based on what you found.
 
-Use advanced search operators when helpful: `"exact phrase"`, `site:domain.com`, date filters.
+Use advanced search operators when helpful: `"exact phrase"`, `site:domain.com`; the Exa tool takes no date parameters — put the year in the query string.
 
 **Tools:**
 - `mcp__exa__web_search_exa` — primary search (AI-powered, better for conceptual queries)
 - `WebSearch` — fallback for factual/current queries
-- `mcp__exa__crawling_exa` — extract content from specific URLs
+- `mcp__exa__web_fetch_exa` — read the full content of specific URLs (batch several per call)
 
 **Per sub-question:** Run 2-3 search queries with different phrasings. Variety in query formulation is how you escape the filter bubble.
 
@@ -74,7 +74,7 @@ Use advanced search operators when helpful: `"exact phrase"`, `site:domain.com`,
 
 For each promising result, read the **full page** (not snippets). Snippets miss context, caveats, and methodology.
 
-- Use `WebFetch` or `mcp__exa__crawling_exa` to read full content
+- Use `WebFetch` or `mcp__exa__web_fetch_exa` to read full content
 - Read 3-5 pages per search iteration minimum
 - Extract: key claims, data points, exact quotes, methodology, author credentials
 - Note the **source type**: primary research, industry report, blog post, documentation, forum discussion
@@ -350,7 +350,7 @@ These aren't phases — they're principles that apply throughout.
 | Tool | Use for | Notes |
 |------|---------|-------|
 | `mcp__exa__web_search_exa` | Primary search | Best for conceptual/semantic queries |
-| `mcp__exa__crawling_exa` | Read specific URLs | Full page content extraction |
+| `mcp__exa__web_fetch_exa` | Read specific URLs | Full page content; batch several URLs per call |
 | `WebFetch` | Read web pages | Fallback for page reading |
 | `WebSearch` | Factual/current searches | Good for recent events, specific facts |
 | `Agent` | Source-vetting subagent (standard Phase 3.5) + parallel subagents (deep mode) | Launch deep-mode agents in a single message |

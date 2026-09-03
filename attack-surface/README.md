@@ -39,7 +39,7 @@ Each analytical phase has a checkpoint where you review findings and steer the r
 ## Requirements
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (CLI)
-- [Exa MCP server](https://docs.exa.ai/reference/mcp) configured for web search and crawling
+- [Exa MCP server](https://docs.exa.ai/reference/mcp) — only its two default tools are used (`web_search_exa`, `web_fetch_exa`); no research-agent tool is needed
 
 ## Installation
 

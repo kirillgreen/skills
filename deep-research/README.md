@@ -95,4 +95,4 @@ Built from research into the top open-source deep research implementations (199-
 
 Copy the `deep-research/` folder to `~/.claude/skills/` (or your skills directory).
 
-Requires: Exa MCP (primary search) or WebSearch (fallback), WebFetch (page reading), Agent tool (deep mode subagents).
+Requires: Exa MCP (`web_search_exa` + `web_fetch_exa`; primary search and page reading) or WebSearch (fallback), WebFetch (page reading), Agent tool (deep mode subagents).
