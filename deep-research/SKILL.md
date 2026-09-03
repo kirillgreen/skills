@@ -66,6 +66,8 @@ Use advanced search operators when helpful: `"exact phrase"`, `site:domain.com`;
 - `WebSearch` — fallback for factual/current queries
 - `mcp__exa__web_fetch_exa` — read the full content of specific URLs (batch several per call)
 
+**Preflight — one line before the first search.** Check whether `mcp__exa__web_search_exa` / `mcp__exa__web_fetch_exa` are in your tool list and say so: "Exa: available — Exa-primary" or "Exa: not registered in this session — running on `WebSearch`/`WebFetch`" (the Exa MCP server may not be registered in every session). Never downgrade silently: the user pays for Exa depth when they call this skill, and a run that quietly used free search is not the run they asked for.
+
 **Per sub-question:** Run 2-3 search queries with different phrasings. Variety in query formulation is how you escape the filter bubble.
 
 **Don't stop early.** Run multiple search iterations: search → read → reflect → search again with refined queries. The first pass gives you the landscape; the second pass fills gaps; the third surfaces the non-obvious. If you're finding valuable sources, keep searching — depth matters more than speed.
@@ -311,7 +313,7 @@ In standard mode keep this short (your top 3-5 load-bearing claims); in deep mod
 {Specific, actionable items based on findings}
 
 ## Sources
-1. [{Title}]({URL}) — {type: paper/docs/blog/report}, {tier: A/B/C}, {independence: Independent/Interested/Unknown}{ ⚠sub-flag if any}
+1. [{Title}]({URL}) — {type: paper/docs/blog/report}, {authority: P/S/T}, {tier: A/B/C}, {independence: Independent/Interested/Unknown}{ ⚠sub-flag if any}
 2. ...
 
 ## Research Metadata

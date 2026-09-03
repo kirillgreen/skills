@@ -2,6 +2,8 @@
 
 Use these templates when launching Phase 2 subagents. Each subagent gets a specific focus area and the research brief. All subagents use two Exa MCP tools: `mcp__exa__web_search_exa` (search) and `mcp__exa__web_fetch_exa` (full page, batch several URLs per call).
 
+If the Phase 2 preflight found no Exa tools in this session, add one line to every gatherer prompt: substitute `WebSearch` for `mcp__exa__web_search_exa` and `WebFetch` for `mcp__exa__web_fetch_exa` — the templates below name the Exa tools, and a gatherer that discovers the gap on its own tends to stop instead of switching.
+
 ---
 
 ## Template: Competitor Intelligence

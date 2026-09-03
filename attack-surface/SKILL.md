@@ -73,6 +73,8 @@ Ask user to confirm before proceeding to Phase 2.
 
 This is the intelligence-gathering phase. Launch parallel subagents to collect diverse source material via Exa MCP. The quality of analysis depends on the quality and diversity of sources.
 
+**Preflight — one line before any gatherer launches.** Check whether `mcp__exa__web_search_exa` / `mcp__exa__web_fetch_exa` are in your tool list and say so: "Exa: available — gatherers run Exa-primary" or "Exa: not registered in this session — gatherers run on `WebSearch`/`WebFetch`; expect thinner Industry Analysis and Customer Voice". Never downgrade silently; if the user wants Exa depth they restart from a session where the server is registered. Pass the outcome into every gatherer prompt so the subagents do not each rediscover it.
+
 ### What to gather
 
 Launch 4-6 parallel `general-purpose` subagents, each focused on a different source type. All subagents use the two Exa MCP tools: `mcp__exa__web_search_exa` (search) and `mcp__exa__web_fetch_exa` (full page). There is no hosted research-agent tool in this pipeline: the gatherers are the multi-hop loop (search → read the full page → search again), and the agent that used to sit in the Industry Analysis step duplicated that loop as a black box and, as the only caller of that tool, accounted for most of the account's lifetime Exa spend.
