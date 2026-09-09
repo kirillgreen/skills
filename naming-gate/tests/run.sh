@@ -209,9 +209,15 @@ rm -f "$SBOX/skill/naming-lint.sh"
 check lint_missing_fails_open OPEN "$(verdict "$(run_gate "$RS/2026-09-08-lint-missing.md")")"
 printf '#!/bin/bash\nif then fi ((\n' > "$SBOX/skill/naming-lint.sh"
 check lint_broken_fails_open OPEN "$(verdict "$(run_gate "$RS/2026-09-08-lint-broken.md")")"
-chmod 000 "$SBOX/skill/naming-lint.sh"
-check lint_unreadable_fails_open OPEN "$(verdict "$(run_gate "$RS/2026-09-08-lint-unreadable.md")")"
-chmod 755 "$SBOX/skill/naming-lint.sh"
+# Third break: the path exists but cannot be run as a script BY ANYONE. `chmod 000` is the
+# obvious way to write this and the wrong one, twice over. It does nothing for root, and CI
+# containers routinely run as root — so the lint keeps working and the assertion passes for no
+# reason. And applied here it would have landed on the broken stub the previous case left
+# behind, which is unrunnable already: an assertion that cannot fail. A DIRECTORY at that path
+# is unrunnable for every user, root included, and does not depend on what was there before.
+rm -f "$SBOX/skill/naming-lint.sh"; mkdir "$SBOX/skill/naming-lint.sh"
+check lint_unrunnable_fails_open OPEN "$(verdict "$(run_gate "$RS/2026-09-08-lint-unrunnable.md")")"
+rmdir "$SBOX/skill/naming-lint.sh"
 # A lint that writes to stdout but says nothing the gate understands must also fail open.
 # The second case is the sharp one: a stray TAB-bearing line has a field 2, and denying on it
 # would produce a block with an EMPTY explanation — a deny with no stated reason.
@@ -236,18 +242,30 @@ touch -t "$(date -v-239M +%Y%m%d%H%M 2>/dev/null || date -d '239 minutes ago' +%
 check pause_within_4h_opens OPEN "$(verdict "$(run_gate "$RS/2026-09-08-pause-in-window.md")")"
 touch -t "$(date -v-241M +%Y%m%d%H%M 2>/dev/null || date -d '241 minutes ago' +%Y%m%d%H%M)" "$PAUSE"
 check pause_past_4h_rearms DENY "$(verdict "$(run_gate "$RS/2026-09-08-pause-expired.md")")"
-# GNU coreutils reads `-f` as --file-system, prints `?` for %m and EXITS 0, so the BSD/GNU
-# fallback cannot be driven by exit status. Without payload validation the arithmetic aborts
-# the pause check and the gate DENIES with the hatch armed — broken on every Linux, and
-# invisible here without this shim.
+# GNU coreutils reads `-f` as --file-system and then treats `%m` as a FILENAME OPERAND: it
+# errors on that name, exits 1, and still prints the real file's filesystem block to STDOUT.
+# So neither half of the obvious fallback works — the exit status is 1 whether the dialect is
+# wrong or the file is missing, and stdout is populated either way. Without payload validation
+# the arithmetic below gets a paragraph of text, aborts the pause check, and the gate DENIES
+# with the hatch armed: broken on every Linux, and invisible on macOS without this shim.
 mkdir -p "$SBOX/gnubin"
 REAL_STAT=$(command -v stat)
-# A FAITHFUL GNU shim, both halves: `-f %m` prints `?` and exits 0, and `-c %Y` — which BSD
-# stat does not accept at all — answers with the real mtime. A shim that emulated only the
-# first half would fail this test for the wrong reason.
+# Ask the HOST which dialect it speaks, so the shim can still answer `-c %Y` with a real mtime
+# whichever kind of stat is underneath. Validate the payload rather than the exit status, for
+# exactly the reason above — this is the gate's own trick, used here to build its adversary.
+_hm=$("$REAL_STAT" -f %m "$SBOX" 2>/dev/null)
+case "$_hm" in ''|*[!0-9]*) HOST_F=-c; HOST_V=%Y ;; *) HOST_F=-f; HOST_V=%m ;; esac
+# A faithful GNU shim, both halves: `-f %m` reproduces the measured behaviour (a non-numeric
+# dump on stdout, exit 1), and `-c %Y` — which BSD stat does not accept at all — answers with
+# the real mtime. A shim emulating only the first half would fail this test for the wrong
+# reason; one hardcoding BSD for the second half passes on macOS and fails on Linux.
 { printf '#!/bin/sh\n'
-  printf 'if [ "$1" = -f ]; then printf "?\\n"; exit 0; fi\n'
-  printf 'if [ "$1" = -c ] && [ "$2" = %%Y ]; then shift 2; exec %s -f %%m "$@"; fi\n' "$REAL_STAT"
+  printf 'if [ "$1" = -f ]; then\n'
+  printf '  shift; printf "stat: cannot read file system information for %%s\\n" "$1" >&2; shift\n'
+  printf '  printf "  File: %%s\\n    ID: fc819e39c702003b Namelen: 255 Type: overlayfs\\n" "$1"\n'
+  printf '  exit 1\n'
+  printf 'fi\n'
+  printf 'if [ "$1" = -c ] && [ "$2" = %%Y ]; then shift 2; exec %s %s %s "$@"; fi\n' "$REAL_STAT" "$HOST_F" "$HOST_V"
   printf 'exec %s "$@"\n' "$REAL_STAT"
 } > "$SBOX/gnubin/stat"; chmod +x "$SBOX/gnubin/stat"
 touch "$PAUSE"
@@ -409,10 +427,12 @@ check trailing_space_after_yes DENY "$(verdict "$(run_gate_conf "$BADCONF" "$PL/
 printf 'genre\t*/notes/plans/*\tPlan\r\n' > "$BADCONF"
 OUT=$(NAMING_CONF="$BADCONF" bash "$LINT" -n "$PL/2026-09-08 Search · Plan — x.md" 2>/dev/null | awk -F'\t' '{print $2}')
 [ "$OUT" = redundant-type ] && say crlf_genre_row_parses redundant-type "$OUT" 1 || say crlf_genre_row_parses redundant-type "$OUT" 0
-# an unreadable config is the same as a missing one: govern nothing
-cp "$CONF" "$SBOX/skill/naming.conf"; chmod 000 "$SBOX/skill/naming.conf"
-check conf_unreadable_fails_open OPEN "$(verdict "$(run_gate "$PL/2026-09-08-conf-unreadable.md")")"
-chmod 644 "$SBOX/skill/naming.conf"
+# A config the gate cannot read is the same as a missing one: govern nothing. Broken with a
+# DIRECTORY rather than `chmod 000` for the same reason as the lint above — mode bits do not
+# stop root, so under CI that spelling would load the config normally and assert nothing. A
+# directory passes `[ -r ]` and then fails the redirect, leaving the tables empty.
+mkdir -p "$SBOX/conf-as-a-directory"
+check conf_unreadable_fails_open OPEN "$(verdict "$(run_gate_conf "$SBOX/conf-as-a-directory" "$PL/2026-09-08-conf-unreadable.md" 2>/dev/null)")"
 # the `doc` record type: a row points the deny message at the reader's own document...
 printf 'doc\thttps://example.com/g.md\ngoverned\t~/notes/plans/*\tyes\n' > "$BADCONF"
 MSG=$(run_gate_conf "$BADCONF" "$PL/2026-09-08-doc-row.md" 2>/dev/null | jq -r '.hookSpecificOutput.permissionDecisionReason')

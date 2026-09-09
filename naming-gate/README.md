@@ -66,7 +66,7 @@ So every failure mode is enumerated and each one lets the write through:
 |---|---|
 | `jq` missing | empty tool name, exit 0 |
 | input is not JSON, or has no `file_path` | exit 0 |
-| `naming-lint.sh` missing, unreadable, or syntactically broken | no output → no codes → exit 0 |
+| `naming-lint.sh` missing, not a runnable file, or syntactically broken | no output → no codes → exit 0 |
 | lint writes non-TSV noise | empty code field → exit 0 |
 | `naming.conf` missing or unreadable | tables empty → nothing is governed → exit 0 |
 | a malformed row in the config | that row is skipped, the rest load |
@@ -128,7 +128,12 @@ the per-folder table, which is why a missing config costs you that check and not
 ## Requirements
 
 `bash` (3.2 is fine — no associative arrays anywhere), `jq` for the hook, `awk` and `grep`.
-macOS and Linux. No other dependencies, nothing to install.
+No other dependencies, nothing to install.
+
+Both platforms are tested, not assumed: the suite is run on macOS (bash 3.2, BSD userland) and
+in a Debian container (bash 5.2, GNU coreutils 9.7, and a `C`-only locale set). That second run
+is not ceremony — it is what caught the `stat` dialect bug described below, which was invisible
+on macOS, and two assertions of the suite's own that passed for the wrong reason.
 
 ## Installation
 
@@ -194,6 +199,17 @@ notes — and so it can break the copy on purpose. 41 of the 89 assertions exist
 that must *not* happen: a broken lint must not block, a stale pause must not disarm, a
 conforming write must not spend the one-shot token, a `..` that escapes a governed root must
 not be judged by it, a folder's genre must not drift away from the prose table.
+
+One habit the suite enforces on itself: **an assertion must fail when the thing it guards is
+broken, and for that reason.** Two of them did not, and both were caught only by running on
+Linux. One broke the lint with `chmod 000` — which does nothing to root, and CI runs as root —
+*and* applied it to a file the previous assertion had already broken, so it could not fail on
+any platform. The other emulated GNU `stat` from a source-reading rather than a measurement.
+Both now break their target with a **directory**, which no user can read as a file, and the
+GNU shim reproduces what coreutils 9.7 actually does: reads `-f` as `--file-system`, treats
+`%m` as a filename, exits 1, and prints the real file's filesystem block to stdout anyway.
+That is why the gate validates the *payload* of `stat` rather than its exit status — the
+status is 1 for both "wrong dialect" and "no such file", and stdout is populated either way.
 
 The suite is written to be *mutation-tested*, and it earns that claim: reverting any one of
 the fixes in it — the GNU-`stat` dialect handling, the `..` normalization, the unknown-code

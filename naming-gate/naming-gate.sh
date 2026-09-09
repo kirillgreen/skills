@@ -137,11 +137,14 @@ governed "$FP" || exit 0
 fresh() {   # fresh <file> <seconds>
   [ -e "$1" ] || return 1
   local m now age
-  # BSD stat first, GNU second — but the EXIT STATUS cannot tell the two dialects apart: GNU
-  # coreutils treats `-f` as --file-system, prints `?` for the unknown %m directive and still
-  # exits 0. The `||` then never fires, `m` is `?`, the arithmetic below aborts the enclosing
-  # `if`, and the gate denies with a pause armed — the hatch silently broken on every Linux.
-  # So validate the payload instead: anything non-numeric means that dialect did not answer.
+  # BSD stat first, GNU second — but the EXIT STATUS cannot arbitrate between the dialects.
+  # Measured on GNU coreutils 9.7: `-f` is read as --file-system and `%m` as a FILENAME, so
+  # stat errors on that name, exits 1, AND still prints the real file's filesystem block to
+  # stdout. Status 1 therefore means either "wrong dialect" or "no such file", and stdout is
+  # populated either way — `cmd || fallback` inside one substitution concatenates the two, and
+  # the arithmetic below then aborts the enclosing `if`: the gate denies with a pause armed,
+  # the hatch silently broken on every Linux. So validate the PAYLOAD, which is unambiguous:
+  # anything non-numeric means that dialect did not answer, whatever it exited with.
   m=$(stat -f %m "$1" 2>/dev/null)
   case "$m" in ''|*[!0-9]*) m=$(stat -c %Y "$1" 2>/dev/null) ;; esac
   case "$m" in
