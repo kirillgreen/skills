@@ -9,8 +9,10 @@ Custom AI Agent Skills for [Claude Code](https://docs.anthropic.com/en/docs/clau
 | [attack-surface](attack-surface/) | Strategic research framework that compresses months of market research into hours through 3 power questions |
 | [bugfix-pipeline](bugfix-pipeline/) | Bug fixing with test gates — traces the code path that *actually runs* before editing, so the fix can't land on a dead lookalike |
 | [deep-research](deep-research/) | Multi-source research with inline citations, source quality tiers, contradictions analysis, and adversarial review |
+| [deploy-verify](deploy-verify/) | Deploy to staging and prove it works — pre-flight gates, smoke tests, failure diagnosis, ending in a machine-readable verdict artifact `ship` can trust |
 | [first-principles](first-principles/) | Multi-pass first principles analysis that decomposes problems to fundamental truths through 4 universal lenses |
 | [naming-gate](naming-gate/) | Filename conventions with teeth — a write-time hook that denies a non-conforming name, sharing one negative list with the sweep, and failing open on every failure of its own machinery |
+| [ship](ship/) | Production-release orchestrator — verifies before AND after release, and refuses to call a store upload "live to users"; a thin engine over a per-project recipe |
 | [tdd](tdd/) | Spec-driven Test-Driven Development — strict Red-Green-Refactor with three isolated subagents, three-dimension spec verification, and a spec-defect escape hatch |
 | [wrap-up](wrap-up/) | End-of-session ritual — one scan, one report, one approval; leaves nothing uncommitted, unmerged, or orphaned, and refuses to claim "clean" when a probe failed |
 
@@ -31,6 +33,14 @@ Skills are specialized knowledge modules for Claude Code — structured prompts 
 | Pure refactor, no behavior change | neither |
 | Session is over | [`wrap-up`](wrap-up/) |
 
+`ship` and `deploy-verify` are the other pair — same discipline, different altitude:
+
+| Situation | Skill |
+|---|---|
+| Prove a change works on staging, no release | [`deploy-verify`](deploy-verify/) |
+| Take a finished change all the way to released | [`ship`](ship/) — it *calls* `deploy-verify` where a project has staging |
+| Release a project with no staging at all | [`ship`](ship/) alone — prod-only mode never calls `deploy-verify` |
+
 ## Installation
 
 Copy any skill folder to your Claude Code skills directory:
@@ -46,7 +56,14 @@ with `tdd` — install those too:
 cp tdd/agents/*.md ~/.claude/agents/
 ```
 
-Two skills need a second step. `bugfix-pipeline` reuses agents that ship with `tdd` (above),
+`ship` reads a per-project **release recipe** and does nothing irreversible without one —
+on first encounter with an un-recipe'd project it runs `--dry-run` and offers to draft
+it. `ship/references/recipe-schema.md` is the schema. It also assumes two things this
+repo doesn't ship: a `code-reviewer` agent (use your own — but keep its power to *halt*
+the release) and, optionally, a merge guard that denies pushes to `main` without an
+explicit token. Both are covered in the skill's "Adapting this to your setup" section.
+
+Two other skills need a second step. `bugfix-pipeline` reuses agents that ship with `tdd` (above),
 and `naming-gate` ships executable machinery rather than prompt text — it needs a config of
 your own and a `PreToolUse` hook in `settings.json`. Its README has both, and its test suite
 runs green from a fresh clone with nothing installed:
