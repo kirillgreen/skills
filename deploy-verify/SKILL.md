@@ -212,7 +212,7 @@ User says: `/deploy-verify`
 1. Detects Railway from cwd + the project's META
 2. Pre-flight: tsc ✅, vitest ✅, env vars ✅, drizzle check ✅, build ✅
 3. Deploy: `git push` triggers Railway, polls PR environment URL
-4. Smoke: `/api/health` 200, `/api/yachts` 200, `/api/search` 200
+4. Smoke: `/api/health` 200, `/api/items` 200, `/api/search` 200
 5. Report: all green
 
 ### Example 2: a Vercel app with a pending migration
