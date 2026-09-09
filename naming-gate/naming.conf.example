@@ -1,0 +1,90 @@
+# naming.conf — the per-folder tables the naming grammar needs.
+#
+# Copy this file to `naming.conf` beside naming-gate.sh and edit the paths to your own.
+# Until a `governed` row says `yes` for a root you actually have, the gate is inert: it
+# governs nothing and every Write goes through. Turn it on one root at a time.
+#
+# WHY THIS FILE EXISTS: the default-genre table wants to live in three places at once —
+# the prose table a human reads, a function in the lint, and the hint the gate prints in a
+# deny message. Three copies drift. Here the tables are data, read by both scripts, and
+# tests/run.sh pins them against the prose table in references/grammar.md as a PAIR
+# (folder → genre), so a mapping cannot drift even while both folder names still exist.
+#
+# FORMAT: TAB-separated, four record types, blank lines ignored. A `#` comment is WHOLE-LINE
+# only, with one exception: a `governed` row may carry one as a fourth field, because that row
+# has only three fields of data and the reader discards the rest. On a `genre` or `form` row a
+# trailing `#…` would land in the value column and become part of the table.
+# A final row without a trailing newline is still read (both consumers handle it), but end the
+# file with one anyway — every other tool that touches it assumes text.
+# Order matters inside a record type: FIRST MATCH WINS, so exclusions precede catch-alls.
+# A glob is matched with bash `case`, so `*` and `?` work and `~/` means $HOME. `|` does NOT
+# mean alternation there — inside a variable expansion it is a literal, so write two rows.
+#
+#   genre     <path glob>   <Genre>       the folder's implicit Type. Naming a genre here is
+#                                         what makes writing it INTO a filename redundant.
+#                                         A folder with no row always writes its Type. There is
+#                                         no way to write an exclusion here the way `governed`
+#                                         has `no`, so keep the globs narrow: a broad row would
+#                                         make an exception under it unexpressible.
+#   governed  <path glob>   yes | no      does the write-time gate judge a Write here.
+#                                         INVARIANT: only add `yes` for a root whose existing
+#                                         files already lint clean, or the gate denies names
+#                                         that match every neighbour — and gets switched off.
+#   form      <path glob>   <hint>        the canonical form quoted in a deny message.
+#   doc       <path or URL>               your grammar document, named in every deny message.
+#                                         Two fields, not three: there is nothing to match on.
+#                                         First row wins; the default is references/grammar.md.
+#
+# DEGRADATION: nothing here is required. If this file is missing or unreadable the lint still
+# runs its whole negative list and merely skips the redundant-type check, and the gate governs
+# nothing and so fails open. A malformed row is skipped, never fatal.
+
+
+# --- where the rules are written down ----------------------------------------
+# Leave this commented out and a deny message points at references/grammar.md NEXT TO the
+# scripts, wherever you installed them. Set it only to point somewhere else — a URL, a wiki
+# page, your team's real convention document. An absolute path here would undo the bundle's
+# one portability property: that it can be moved anywhere as long as it moves whole.
+#doc	https://example.com/handbook/naming
+
+# --- default genre per folder ------------------------------------------------
+# Every row here must match a row of the table in references/grammar.md, and vice versa —
+# tests/run.sh fails on either direction. Edit the two together.
+genre	*/notes/research/*	Research
+genre	*/notes/plans/*	Plan
+genre	*/notes/decisions/*	ADR
+genre	*/notes/lessons/*	Lesson
+genre	*/notes/references/*	Reference
+genre	*/notes/tools/*	Tool
+genre	*/notes/audits/*	Audit
+genre	*/Transcripts/*	Transcript
+# A diary tree kept in Russian: the folder names, the genre word and the titles are all
+# non-ASCII. Kept in the example deliberately — filenames are UTF-8, the 100-character cap
+# counts characters and not bytes, and tests/run.sh drives this row to prove both still hold.
+genre	*/дневник/выжимки/*	Выжимка
+genre	*/дневник/архив/*	Расшифровка
+
+# --- roots the write-time gate judges ----------------------------------------
+# Exclusions first: `imports/` holds files exported by some other tool, which are renamed when
+# they are filed rather than when they land, and `archive/` holds frozen versions that keep the
+# names they were captured with. Governing either would deny names that match every neighbour.
+governed	~/notes/imports/*	no	# tool exports, renamed when filed
+governed	~/notes/archive/*	no	# frozen versions, like *-baseline/
+governed	~/notes/*	yes
+governed	~/дневник/*	yes
+
+# --- canonical form shown in a deny message ----------------------------------
+# Most specific first; keep the `*` catch-all last so every governed folder gets some hint.
+form	*/notes/research/*	YYYY-MM-DD ⟨Scope⟩ — ⟨title⟩.md — Research is the folder default, so no type is written
+form	*/notes/plans/*	YYYY-MM-DD ⟨Scope⟩ — ⟨title⟩.md — Plan is the folder default; a running log is `⟨Scope⟩ · Log — …`
+form	*/notes/decisions/*	ADR-NNNN ⟨Scope⟩ — ⟨title⟩.md — the key carries the type
+form	*/notes/lessons/*	YYYY-MM-DD ⟨Scope⟩ — ⟨title⟩.md — Lesson is the folder default, so no type is written
+form	*/notes/references/*	YYYY-MM-DD ⟨Source⟩ — ⟨title⟩.md — head is the source or author, Reference is the default
+form	*/notes/tools/*	YYYY-MM-DD ⟨Name⟩ — ⟨what it is⟩ (⟨form⟩).md — head is the tool name, Tool is the default
+form	*/notes/audits/*	YYYY-MM-DD ⟨Scope⟩ — ⟨what was audited⟩.md — Audit is the folder default
+form	*/notes/evergreen/*	⟨Head⟩ — ⟨title⟩ (⟨author⟩).md — evergreen, no date and no type
+form	*/Transcripts/*	YYYY-MM-DD ⟨Scope⟩ — ⟨title⟩.md — Transcript is the folder default
+form	*/дневник/выжимки/*	ГГГГ-ММ-ДД ⟨название⟩.md — у папки есть жанр по умолчанию, тип не пишется
+form	*/дневник/архив/*	ГГГГ-ММ-ДД ⟨название⟩.md — у папки есть жанр по умолчанию, тип не пишется
+form	*/дневник/*	ГГГГ-ММ-ДД ⟨Тип⟩ — ⟨название⟩.md — у этой папки нет жанра по умолчанию, поэтому тип пишется
+form	*	YYYY-MM-DD ⟨Scope⟩ · ⟨Type⟩ — ⟨title⟩.md — this folder has no default genre, so the Type is written

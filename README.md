@@ -10,6 +10,7 @@ Custom AI Agent Skills for [Claude Code](https://docs.anthropic.com/en/docs/clau
 | [bugfix-pipeline](bugfix-pipeline/) | Bug fixing with test gates — traces the code path that *actually runs* before editing, so the fix can't land on a dead lookalike |
 | [deep-research](deep-research/) | Multi-source research with inline citations, source quality tiers, contradictions analysis, and adversarial review |
 | [first-principles](first-principles/) | Multi-pass first principles analysis that decomposes problems to fundamental truths through 4 universal lenses |
+| [naming-gate](naming-gate/) | Filename conventions with teeth — a write-time hook that denies a non-conforming name, sharing one negative list with the sweep, and failing open on every failure of its own machinery |
 | [tdd](tdd/) | Spec-driven Test-Driven Development — strict Red-Green-Refactor with three isolated subagents, three-dimension spec verification, and a spec-defect escape hatch |
 | [wrap-up](wrap-up/) | End-of-session ritual — one scan, one report, one approval; leaves nothing uncommitted, unmerged, or orphaned, and refuses to claim "clean" when a probe failed |
 
@@ -43,6 +44,15 @@ with `tdd` — install those too:
 
 ```bash
 cp tdd/agents/*.md ~/.claude/agents/
+```
+
+Two skills need a second step. `bugfix-pipeline` reuses agents that ship with `tdd` (above),
+and `naming-gate` ships executable machinery rather than prompt text — it needs a config of
+your own and a `PreToolUse` hook in `settings.json`. Its README has both, and its test suite
+runs green from a fresh clone with nothing installed:
+
+```bash
+bash naming-gate/tests/run.sh
 ```
 
 ## License
