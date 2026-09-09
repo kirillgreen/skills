@@ -1,0 +1,73 @@
+# The bundle's cross-platform claim, made durable.
+#
+# Every defect this suite has ever caught was specific to a userland or a privilege level, not
+# to an operating system: the `stat` dialect bug was invisible under BSD stat, and two
+# assertions that "passed" for years passed only because `chmod 000` does nothing to root.
+# A single-runner job would have proved none of it, so the matrix below varies exactly those
+# two axes — BSD vs GNU userland, and unprivileged vs root — and nothing else.
+name: naming-gate
+
+on:
+  push:
+    paths: ['naming-gate/**', '.github/workflows/naming-gate.yml']
+  pull_request:
+    paths: ['naming-gate/**', '.github/workflows/naming-gate.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  userland:
+    # macOS gives BSD stat and the bash-3.2-era tooling the bundle promises to support;
+    # ubuntu gives GNU coreutils. Both run as an unprivileged user.
+    name: fixtures (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false        # a red on one userland must not hide the other's result
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record the environment being tested
+        run: |
+          echo "bash     $BASH_VERSION"
+          echo "uid      $(id -u)"
+          stat --version 2>/dev/null | head -1 || echo "stat     BSD (no --version)"
+          jq --version
+          locale -a | tr '\n' ' '; echo
+      - name: Fixtures
+        run: bash naming-gate/tests/run.sh
+
+  root:
+    # The case that found two dead assertions: a container runs as root, and root ignores the
+    # mode bits a test might use to make a file unreadable. Debian also ships a C-only locale
+    # set, which is what the lint's UTF-8 probe exists for.
+    name: fixtures (debian, root)
+    runs-on: ubuntu-latest
+    container: debian:stable-slim
+    steps:
+      - name: Dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq jq >/dev/null
+      - uses: actions/checkout@v4
+      - name: Record the environment being tested
+        run: |
+          . /etc/os-release; echo "$PRETTY_NAME"
+          echo "bash     $BASH_VERSION"
+          echo "uid      $(id -u)   # expected 0 — that is the point of this job"
+          echo "coreutils $(stat --version | head -1)"
+          locale -a | tr '\n' ' '; echo
+      - name: Fixtures
+        run: bash naming-gate/tests/run.sh
+
+  shellcheck:
+    # The README claims `shellcheck -S warning` is clean with four documented exceptions.
+    # An unenforced claim in a README is a claim that will stop being true.
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck --version
+      - run: shellcheck -S warning naming-gate/naming-gate.sh naming-gate/naming-lint.sh naming-gate/tests/run.sh

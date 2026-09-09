@@ -1,5 +1,7 @@
 # naming-gate
 
+[![naming-gate](https://github.com/kirillgreen/skills/actions/workflows/naming-gate.yml/badge.svg)](https://github.com/kirillgreen/skills/actions/workflows/naming-gate.yml)
+
 A Claude Code skill that enforces your filename convention at the moment a file is created,
 rather than documenting it and hoping. A PreToolUse hook checks the name a `Write` is about to
 use, denies it with the specific reason and the canonical form for that folder, and lets
@@ -130,10 +132,13 @@ the per-folder table, which is why a missing config costs you that check and not
 `bash` (3.2 is fine — no associative arrays anywhere), `jq` for the hook, `awk` and `grep`.
 No other dependencies, nothing to install.
 
-Both platforms are tested, not assumed: the suite is run on macOS (bash 3.2, BSD userland) and
-in a Debian container (bash 5.2, GNU coreutils 9.7, and a `C`-only locale set). That second run
-is not ceremony — it is what caught the `stat` dialect bug described below, which was invisible
-on macOS, and two assertions of the suite's own that passed for the wrong reason.
+Both platforms are tested, not assumed. CI runs the suite three ways on every change, and the
+matrix varies the two axes that have actually produced bugs here rather than the OS name:
+**BSD userland** (macOS), **GNU coreutils** (ubuntu), and **GNU as root** (a Debian container,
+which also ships a `C`-only locale set). The third is not ceremony — running as root is what
+exposed two assertions that had been passing for the wrong reason, since `chmod 000` does
+nothing to root, and the GNU run is what caught the `stat` dialect bug that was invisible on
+macOS. A fourth job holds the `shellcheck -S warning` claim below to its word.
 
 ## Installation
 
