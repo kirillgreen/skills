@@ -74,9 +74,21 @@ SUCCESS + SHA-match → run the probes; FAILED → proven FAIL.
   ships from clobbering each other). Fresh literal present == new bundle live. **Needs
   `curl`** — for a project whose session blocks curl (context-mode sessions, for instance) the
   recipe must use `railway-meta-sha` for the SPA instead.
-- `convex-function-spec:<fn:arg:expected>` — `bunx convex function-spec --prod` (or
-  per recipe); assert the named function's arg matches `expected` (the **contract**,
-  not "spec returned").
+- `convex-function-spec:<fn:arg:expected>` — read the spec from a **run-unique file**,
+  never a pipe or `$(…)`: the CLI prints the whole spec (hundreds of KB on a real project)
+  in one write and exits, so a pipe loses the tail and jq fails or grep misses a deployed
+  function. `SPEC=$(mktemp) && bunx convex function-spec --prod > "$SPEC"` (or per recipe),
+  then assert with `jq -e` exit codes, never by reading printed values, in the **same shell
+  call** as the read (`$SPEC` is gone in the next Bash call), recording each assertion's exit
+  code: `jq -e '.url == "<prod deployment URL from the project META>" and (.functions | length) > 0' "$SPEC"`
+  and, per contract, `jq -e '.functions[] | select(.identifier == "<module>.js:<fn>") |
+  .args.value.<arg>.optional == <expected>' "$SPEC"` (a new function alone:
+  `jq -r '.functions[].identifier' "$SPEC" | grep -Fx '<module>.js:<fn>'`). The **contract**,
+  not "spec returned". Outcomes: CLI exit ≠ 0, empty file or jq parse error → UNKNOWN
+  (unreadable proof); `.url` ≠ the META's prod deployment, or the META names none → UNKNOWN
+  (wrong or unproven target); `.url` OK and zero functions → proven FAIL (a wrong-directory
+  deploy that shipped nothing); function missing or `optional ≠ expected` (`null` included) →
+  proven FAIL; PASS only when every `jq -e` exits 0.
 - `authed-roundtrip:<route>` — mint a session per `recipe.verify_auth`; GET `<route>`
   carrying it; assert **200 + a user object**; `503`/`500` = the drift signature
   (proven FAIL). An unauth probe does NOT count.

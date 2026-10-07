@@ -74,7 +74,8 @@ blocked_steps:   [ e.g. "play-upload: keystore/console pending" ]
   - `bundle-marker:<literal>` — grep a fresh literal in the SPA bundle written to
     a file (never var-capture — truncates >1 MB; hashes contain `-`).
   - `convex-function-spec:<fn:arg:expected>` — assert the deployed contract, not
-    "spec returned".
+    "spec returned". Read the spec from a temp file (a pipe or `$(…)` loses the tail of
+    the one-write output); assert `.url`, count and contract with `jq -e` exit codes.
   - `asc-build-valid:<build#>` — the build THIS run uploaded reached `VALID`. `<build#>`
     is **resolved at release time** (= max-ASC-build + 1), not a static target — like
     `railway-meta-sha`; a recipe may write bare `asc-build-valid`.
